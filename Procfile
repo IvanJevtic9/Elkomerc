@@ -1,0 +1,1 @@
+web: gunicorn Elkomerc.wsgi --log-file -

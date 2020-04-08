@@ -8,7 +8,7 @@ from django.contrib.auth import authenticate
 from django.http import JsonResponse
 import json
 
-from .serializers import AccountRegisterSerializer, AccountListSerializer, AccountDetailSerializer
+from .serializers import AccountRegisterSerializer, AccountListSerializer, AccountDetailSerializer, AccountChangePasswordSerializer
 from account.models import Account, Company, User
 
 from .permissions import AnonPermissionOnly, IsOwnerOrReadOnly
@@ -17,11 +17,12 @@ jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
 jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
 jwt_response_payload_handler = api_settings.JWT_RESPONSE_PAYLOAD_HANDLER
 
+
 class AuthView(APIView):
     authentication_classes = []
     permission_classes = [AnonPermissionOnly, ]
-    
-    def post(self,request, *args, **kwargs):
+
+    def post(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             return Response({'detail': 'You are already authenticated'}, status=400)
         data = request.data
@@ -40,16 +41,18 @@ class AuthView(APIView):
                 response = jwt_response_payload_handler(token, email)
 
                 return Response(response)
-        return Response({"detail": "Invalid credentials."},status=401)
+        return Response({"detail": "Invalid credentials."}, status=401)
+
 
 class RegisterAPIView(generics.CreateAPIView):
     queryset = Account.objects.all()
-    serializer_class = AccountRegisterSerializer 
+    serializer_class = AccountRegisterSerializer
     permission_classes = [permissions.IsAuthenticated, ]
-    # TODO Customize register view template ,currently its not possible to create this via rest-api post method     
+    # TODO Customize register view template ,currently its not possible to create this via rest-api post method
 
     def get_serializer_context(self, *args, **kwargs):
-        return {"request": self.request}           
+        return {"request": self.request}
+
 
 class AccountListApiView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, ]
@@ -79,10 +82,11 @@ class AccountListApiView(generics.ListAPIView):
                 Q(user__first_name__icontains=first_name)
             ).distinct()
 
-        return queryset_list        
+        return queryset_list
 
     def get_serializer_context(self):
         return {'request': self.request}
+
 
 class AccountDetailApiView(
     mixins.UpdateModelMixin,
@@ -94,31 +98,30 @@ class AccountDetailApiView(
     lookup_field = 'id'
 
     def get_queryset(self, *args, **kwargs):
-        return Account.object.all()
+        return Account.objects.all()
 
     def get_serializer_class(self):
-        return AccountDetailSerializer 
+        return AccountDetailSerializer
 
-    def put (self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
 
     def patch(self, request, *args, **kwargs):
         return self.patch(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
-        return self.destroy(request, *args, **kwargs)        
-    
+        return self.destroy(request, *args, **kwargs)
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.save()
         serializer = self.get_serializer(data=request.data)
-        
+
         if serializer.is_valid(raise_exception=True):
             account_id = self.kwargs['id']
             account = Account.objects.get(id=account_id)
 
             # account info
-            password = serializer.validated_data.get('password')
             address = serializer.validated_data.get('address', None)
             city = serializer.validated_data.get('city', None)
             post_code = serializer.validated_data.get('post_code', None)
@@ -127,20 +130,22 @@ class AccountDetailApiView(
             # user info - if exist
             first_name = serializer.validated_data.get('first_name')
             last_name = serializer.validated_data.get('last_name')
-            date_of_birth = serializer.validated_data.get('date_of_birth')          
+            date_of_birth = serializer.validated_data.get('date_of_birth')
             # company info - if exist
             company_name = serializer.validated_data.get('company_name')
             pib = serializer.validated_data.get('pib')
             fax = serializer.validated_data.get('fax')
 
-            if account_type != account.account_type:         
+            if account_type != account.account_type:
                 if account.account_type == "USR":
                     User.objects.filter(email=account.email).delete()
-                    company_obj = Company(email=account,company_name=company_name,pib=pib,fax=fax)
+                    company_obj = Company(
+                        email=account, company_name=company_name, pib=pib, fax=fax)
                     company_obj.save()
                 else:
                     Company.objects.filter(email=account.email).delete()
-                    user_obj = User(email=account,first_name=first_name,last_name=last_name,date_of_birth=date_of_birth)
+                    user_obj = User(email=account, first_name=first_name,
+                                    last_name=last_name, date_of_birth=date_of_birth)
                     user_obj.save()
             else:
                 if account.account_type == "USR":
@@ -156,7 +161,6 @@ class AccountDetailApiView(
                     company_obj.fax = fax
                     company_obj.save()
 
-            account.set_password(password)
             account.address = address
             account.city = city
             account.post_code = post_code
@@ -164,6 +168,40 @@ class AccountDetailApiView(
             account.account_type = account_type
             account.save()
 
-        return JsonResponse({"message": "Account has been updated successfully."},status=200)       
+        return JsonResponse({"message": "Account has been updated successfully."}, status=200)
 
-    
+
+class AccountChangePassword(
+    mixins.UpdateModelMixin,
+    generics.RetrieveAPIView
+):
+    permission_classes = [IsOwnerOrReadOnly, ]
+    serializer_class = AccountChangePasswordSerializer
+    lookup_field = 'id'
+
+    def get_queryset(self, *args, **kwargs):
+        return Account.objects.all()
+
+    def get_serializer_class(self):
+        return AccountChangePasswordSerializer
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return self.patch(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.save()
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            account_id = self.kwargs['id']
+            account_obj = Account.objects.get(id=account_id)
+            
+            password = serializer.validated_data.get('new_password', None)
+            account_obj.set_password(password)
+            account_obj.save()
+
+            return JsonResponse({"message": "Password has been changed successfully."}, status=200) 

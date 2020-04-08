@@ -81,18 +81,22 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
             pib = data.get('pib', None)
 
             if company_name is None:
-                raise serializers.ValidationError({'company_name': _('This company name is required.')})
+                raise serializers.ValidationError(
+                    {'company_name': _('This company name is required.')})
 
             if pib is None:
-                raise serializers.ValidationError({'pib': _("Pib is required.")})
+                raise serializers.ValidationError(
+                    {'pib': _("Pib is required.")})
 
             qs_company = Company.objects.filter(company_name=company_name)
             if qs_company.exists():
-                raise serializers.ValidationError({'company_name': _('This company name already exists.')})
+                raise serializers.ValidationError(
+                    {'company_name': _('This company name already exists.')})
         else:
             first_name = data.get('first_name')
             if first_name is None:
-                raise serializers.ValidationError({'first_name': _("Frist name is required.")})
+                raise serializers.ValidationError(
+                    {'first_name': _("Frist name is required.")})
 
         return data
 
@@ -106,7 +110,8 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
         account_obj = Account(
             email=(validated_data.get('email')), address=address, city=city, post_code=post_code, phone_number=phone_number, account_type=account_type)
         account_obj.set_password(validated_data.get('password'))
-        account_obj.is_active = False # TODO Email comfirmation need to be implemented, then is_active - True
+        # TODO Email comfirmation need to be implemented, then is_active - True
+        account_obj.is_active = False
 
         account_obj.save()
 
@@ -139,8 +144,9 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
         ret.pop('city')
         ret.pop('phone_number')
         ret.pop('account_type')
-        
-        return ret 
+
+        return ret
+
 
 class CompanySerializer(serializers.ModelSerializer):
     class Meta:
@@ -151,6 +157,7 @@ class CompanySerializer(serializers.ModelSerializer):
             'fax'
         ]
 
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -160,10 +167,11 @@ class UserSerializer(serializers.ModelSerializer):
             'date_of_birth'
         ]
 
+
 class AccountListSerializer(serializers.ModelSerializer):
     company = CompanySerializer(read_only=True, many=True)
     user = UserSerializer(read_only=True, many=True)
-    class Meta: 
+    class Meta:
         model = Account
         fields = [
             'id',
@@ -180,11 +188,7 @@ class AccountListSerializer(serializers.ModelSerializer):
 class AccountDetailSerializer(serializers.ModelSerializer):
     company = CompanySerializer(read_only=True, many=True)
     user = UserSerializer(read_only=True, many=True)
-    email = serializers.EmailField()
-    password = serializers.CharField(
-        write_only=True, style={'input_type': 'password'})
-    old_password = serializers.CharField(
-        write_only=True, style={'input_type': 'password'})
+    email = serializers.EmailField(read_only=True)
     class Meta:
         model = Account
         fields = [
@@ -196,44 +200,9 @@ class AccountDetailSerializer(serializers.ModelSerializer):
             'phone_number',
             'account_type',
             'company',
-            'user',
-            'old_password',
-            'password',
+            'user'
         ]
-    def validate_email(self, value):
-        request = self.context.get('request')
-        path = request.stream.path
-        account_id = int(next(filter(str.isdigit, path.split('/'))))
-        
-        try:
-            acc_obj = Account.objects.get(id=account_id)
-        except Account.DoesNotExist:
-            raise serializers.ValidationError(_("Email address is not valid."))
-
-        if acc_obj.email != value:
-            raise serializers.ValidationError(_("Email address is not valid."))
-
-        return value
-
-    def validate_old_password(self, value):
-        request = self.context.get('request')
-        email = request.data.get('email')
-        old_password = Account.objects.get(email=email).password
-
-        if not check_password(value, old_password):
-            raise serializers.ValidationError(_("Invalid password."))
-
-        return value
-
-    def validate_password(self, value):
-        try:
-            validators.validate_password(password=value)
-        except exceptions.ValidationError as e:
-            message = e.messages[0]
-            raise serializers.ValidationError(_(message))
-
-        return value
-
+    
     def validate(self, data):
         # Ovde ide validacija vezana za Company ili User
         data = self.context.get('request').data
@@ -249,18 +218,79 @@ class AccountDetailSerializer(serializers.ModelSerializer):
                     {'company_name': _("Company name is required.")})
 
             if pib is None:
-                raise serializers.ValidationError({'pib': _("Pib is required.")})
+                raise serializers.ValidationError(
+                    {'pib': _("Pib is required.")})
 
             qs_company = Company.objects.get(company_name=company_name)
-            if qs_company.email != email and  qs_company is not None:
-                raise serializers.ValidationError({'company_name': _('This company name already exists.')})
+            if qs_company.email != email and qs_company is not None:
+                raise serializers.ValidationError(
+                    {'company_name': _('This company name already exists.')})
         else:
             first_name = data.get('first_name')
             if first_name is None:
-                raise serializers.ValidationError({'first_name': _("Frist name is required.")})
+                raise serializers.ValidationError(
+                    {'first_name': _("Frist name is required.")})
 
         return data
-    
+
     def create(self, validated_data):
-        account_obj = Account.objects.get(email=validated_data.get('email'))
+        data = self.context.get('request').data
+        email = email = data.get('email')
+        account_obj = Account.objects.get(email=email)
+
         return account_obj
+
+
+class AccountChangePasswordSerializer(serializers.ModelSerializer):
+    old_password = serializers.CharField(
+        write_only=True, style={'input_type': 'password'})
+    new_password = serializers.CharField(
+        write_only=True, style={'input_type': 'password'})
+    new_password2 = serializers.CharField(
+        write_only=True, style={'input_type': 'password'})
+    email = serializers.EmailField(read_only=True)
+    class Meta:
+        model = Account
+        fields = [
+            'email',
+            'old_password',
+            'new_password',
+            'new_password2'
+        ]
+
+    def validate_old_password(self, value):
+        request = self.context.get('request')
+        path = request.stream.path
+        account_id = int(next(filter(str.isdigit, path.split('/'))))
+        
+        old_password = Account.objects.get(id=account_id).password
+
+        if value != None and not check_password(value, old_password):
+            raise serializers.ValidationError(_("Invalid password."))
+
+        return value
+
+    def validate_new_password(self, value):
+        try:
+            validators.validate_password(password=value)
+        except exceptions.ValidationError as e:
+            message = e.messages[0]
+            raise serializers.ValidationError(_(message))
+
+        return value
+
+    def validate_new_password2(self, value):
+        request = self.context.get('request')
+        password = request.data.get('new_password')
+
+        if value != password:
+            raise serializers.ValidationError(_("Passwords don't match."))
+
+        return value
+
+    def create(self, validated_data):
+        data = self.context.get('request').data
+        email = email = data.get('email')
+        account_obj = Account.objects.get(email=email)
+        
+        return account_obj    

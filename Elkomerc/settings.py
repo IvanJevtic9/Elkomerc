@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'six',
     'rest_framework',
     'account'
 ]
@@ -115,6 +116,15 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
+
+# Email host server
+EMAIL_USE_TLS = True
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST_USER = 'el.komerc.d.o.o.rs@gmail.com' #TODO -kao i za deploy ove informacije vaditi iz set os.environ.get('EMAIL_USER')
+EMAIL_HOST_PASSWORD = 'Alingconel1412'
+EMAIL_PORT = 587
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
 
 
 # Static files (CSS, JavaScript, Images)

@@ -2,9 +2,12 @@ from rest_framework import serializers
 from rest_framework.reverse import reverse as api_reverse
 
 from django.utils.translation import ugettext_lazy as _
+
 from django.core import exceptions
-import django.contrib.auth.password_validation as validators
+
+from django.contrib.auth import password_validation as validators
 from django.contrib.auth.hashers import check_password
+
 
 import datetime
 
@@ -15,7 +18,6 @@ jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
 jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
 jwt_response_payload_handler = api_settings.JWT_RESPONSE_PAYLOAD_HANDLER
 expire_delta = api_settings.JWT_EXPIRATION_DELTA
-
 
 class AccountRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -100,41 +102,6 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
 
         return data
 
-    def create(self, validated_data):
-        address = validated_data.get('address', None)
-        city = validated_data.get('city', None)
-        post_code = validated_data.get('post_code', None)
-        phone_number = validated_data.get('phone_number', None)
-        account_type = validated_data.get('account_type', None)
-
-        account_obj = Account(
-            email=(validated_data.get('email')), address=address, city=city, post_code=post_code, phone_number=phone_number, account_type=account_type)
-        account_obj.set_password(validated_data.get('password'))
-        # TODO Email comfirmation need to be implemented, then is_active - True
-        account_obj.is_active = False
-
-        account_obj.save()
-
-        if account_type == "CMP":
-            company_name = validated_data.get('company_name')
-            pib = validated_data.get('pib')
-            fax = validated_data.get('fax')
-
-            company_obj = Company(
-                email=account_obj, company_name=company_name, pib=pib, fax=fax)
-            company_obj.save()
-
-        else:
-            first_name = validated_data.get('first_name')
-            last_name = validated_data.get('last_name')
-            date_of_birth = validated_data.get('date_of_birth')
-
-            user_obj = User(email=account_obj, first_name=first_name,
-                            last_name=last_name, date_of_birth=date_of_birth)
-            user_obj.save()
-
-        return account_obj
-
     def to_representation(self, obj):
         # get the original representation
         ret = super(AccountRegisterSerializer, self).to_representation(obj)
@@ -171,6 +138,7 @@ class UserSerializer(serializers.ModelSerializer):
 class AccountListSerializer(serializers.ModelSerializer):
     company = CompanySerializer(read_only=True, many=True)
     user = UserSerializer(read_only=True, many=True)
+    is_active = serializers.BooleanField(read_only=True)
     class Meta:
         model = Account
         fields = [
@@ -182,13 +150,15 @@ class AccountListSerializer(serializers.ModelSerializer):
             'phone_number',
             'account_type',
             'company',
-            'user'
+            'user',
+            'is_active'
         ]
 
 class AccountDetailSerializer(serializers.ModelSerializer):
     company = CompanySerializer(read_only=True, many=True)
     user = UserSerializer(read_only=True, many=True)
     email = serializers.EmailField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
     class Meta:
         model = Account
         fields = [
@@ -200,7 +170,8 @@ class AccountDetailSerializer(serializers.ModelSerializer):
             'phone_number',
             'account_type',
             'company',
-            'user'
+            'user',
+            'is_active'
         ]
     
     def validate(self, data):

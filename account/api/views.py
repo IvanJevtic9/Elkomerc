@@ -5,9 +5,18 @@ from rest_framework_jwt.settings import api_settings
 
 from django.db.models import Q
 from django.contrib.auth import authenticate
-from django.http import JsonResponse
+from django.contrib.sites.shortcuts import get_current_site
+
+from django.core.mail import EmailMessage
+from django.http import JsonResponse, HttpResponse
+
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_text
+
+from django.template.loader import render_to_string
 import json
 
+from account.activation_tokens import account_activation_token
 from .serializers import AccountRegisterSerializer, AccountListSerializer, AccountDetailSerializer, AccountChangePasswordSerializer
 from account.models import Account, Company, User
 
@@ -31,6 +40,7 @@ class AuthView(APIView):
         account = authenticate(email=email, password=password)
 
         qs = Account.objects.filter(email__iexact=email)
+        qs = qs.filter(is_active__iexact=True)
 
         if qs.count() == 1:
             account_obj = qs.first()
@@ -47,12 +57,84 @@ class AuthView(APIView):
 class RegisterAPIView(generics.CreateAPIView):
     queryset = Account.objects.all()
     serializer_class = AccountRegisterSerializer
-    permission_classes = [permissions.IsAuthenticated, ]
+    permission_classes = [AnonPermissionOnly, ]
     # TODO Customize register view template ,currently its not possible to create this via rest-api post method
 
     def get_serializer_context(self, *args, **kwargs):
         return {"request": self.request}
 
+    def get_serializer_class(self):
+        return AccountRegisterSerializer
+
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            address = serializer.validated_data.get('address', None)
+            city = serializer.validated_data.get('city', None)
+            post_code = serializer.validated_data.get('post_code', None)
+            phone_number = serializer.validated_data.get('phone_number', None)
+            account_type = serializer.validated_data.get('account_type', None)
+
+            account_obj = Account(
+                email=(serializer.validated_data.get('email')), address=address, city=city, post_code=post_code, phone_number=phone_number, account_type=account_type)
+            account_obj.set_password(serializer.validated_data.get('password'))
+            account_obj.is_active = False
+
+            account_obj.save()
+
+            if account_type == "CMP":
+                company_name = serializer.validated_data.get('company_name')
+                pib = serializer.validated_data.get('pib')
+                fax = serializer.validated_data.get('fax')
+
+                company_obj = Company(
+                    email=account_obj, company_name=company_name, pib=pib, fax=fax)
+                company_obj.save()
+
+            else:
+                first_name = serializer.validated_data.get('first_name')
+                last_name = serializer.validated_data.get('last_name')
+                date_of_birth = serializer.validated_data.get('date_of_birth')
+
+                user_obj = User(email=account_obj, first_name=first_name,
+                                last_name=last_name, date_of_birth=date_of_birth)
+                user_obj.save()
+
+            current_site = get_current_site(request)
+            mail_subject = 'Activate your account.'
+            message = render_to_string('acc_active_email.html', {
+                'account': account_obj,
+                'domain': current_site.domain,
+                'uid':urlsafe_base64_encode(force_bytes(account_obj.id)),
+                'token':account_activation_token.make_token(account_obj),
+            })
+
+            to_email = serializer.validated_data.get('email')
+            email = EmailMessage(
+                        mail_subject, message, to=[to_email]
+            )
+            email.send()
+
+            return JsonResponse({"message": "Please confirm your email address to complete the registration."}, status=200)
+            
+def activate(request, uidb64, token):
+    try:
+        uid = force_text(urlsafe_base64_decode(uidb64))
+        account_obj = Account.objects.get(id=uid)
+    except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
+        account_obj = None
+    if account_obj is not None and account_activation_token.check_token(account_obj, token):
+        account_obj.is_active = True
+        account_obj.save()
+        # return redirect('home')
+        return HttpResponse('Thank you for your email confirmation. Now you can login your account.')
+    else:
+        return HttpResponse('Activation link is invalid!')
 
 class AccountListApiView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, ]
@@ -199,9 +281,9 @@ class AccountChangePassword(
         if serializer.is_valid(raise_exception=True):
             account_id = self.kwargs['id']
             account_obj = Account.objects.get(id=account_id)
-            
+
             password = serializer.validated_data.get('new_password', None)
             account_obj.set_password(password)
             account_obj.save()
 
-            return JsonResponse({"message": "Password has been changed successfully."}, status=200) 
+            return JsonResponse({"message": "Password has been changed successfully."}, status=200)

@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'six',
     'rest_framework',
-    'account'
+    'account',
+    'import_export',
 ]
 
 MIDDLEWARE = [
@@ -117,6 +118,8 @@ USE_L10N = True
 
 USE_TZ = True
 
+IMPORT_EXPORT_USE_TRANSACTIONS = True
+
 # Email host server
 EMAIL_USE_TLS = True
 EMAIL_HOST = 'smtp.gmail.com'
@@ -148,12 +151,10 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter'
     ),
+    'DEFAULT_PAGINATION_CLASS': 'Elkomerc.pagination.CFEAPIPagination',
     'SEARCH_PARAM': 'q',
     'ORDERING_PARAM': 'ordering'
 }
-"""
-'DEFAULT_PAGINATION_CLASS': 'accounts.api.utils.CFEAPIPagination',
-"""
 
 JWT_AUTH = {
     'JWT_ENCODE_HANDLER':

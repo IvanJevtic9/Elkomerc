@@ -2,7 +2,7 @@ from django import forms
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 
-from .models import Account, User, Company
+from .models import Account, User, Company, PostCode
 
 class AccountCreateForm(forms.ModelForm):
     password1 = forms.CharField(label='Password', widget=forms.PasswordInput)
@@ -12,9 +12,9 @@ class AccountCreateForm(forms.ModelForm):
         model = Account
         fields = [
             'email',
+            'profile_image',
             'address',
-            'city',
-            'post_code',
+            'post_code_id',
             'phone_number'
         ]
 
@@ -92,3 +92,12 @@ class CompanyForm(forms.ModelForm):
         qs.save()
 
         return super().clean(*args, **kwargs) 
+
+class PostForm(forms.ModelForm):
+    class Meta:
+        model = PostCode
+        fields = [
+            'id',
+            'zip_code',
+            'city'
+        ]        

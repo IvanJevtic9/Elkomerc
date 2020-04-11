@@ -10,6 +10,16 @@ phone_regex = RegexValidator(
 
 from .managers import CustomUserManager
 
+class PostCode(models.Model):
+    zip_code = models.CharField(max_length=15)
+    city = models.CharField(max_length=50)
+
+    class Meta:
+        verbose_name = "Post code"
+        verbose_name_plural = "Post codes"
+
+    def __str__(self):
+        return self.city
 
 class Account(AbstractUser):
     ACC_TYPE = (
@@ -21,12 +31,10 @@ class Account(AbstractUser):
     last_name = None
     email = models.EmailField(_('email address'), validators=[validate_email], unique=True)
     address = models.CharField(max_length=100,blank=True,null=True)
-    city = models.CharField(max_length=50,blank=True,null=True)
-    post_code = models.CharField(max_length=20,blank=True,null=True)
+    post_code_id = models.ForeignKey('PostCode',to_field='id',on_delete=models.SET_NULL, blank=True,null=True, related_name='account')
     phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True)
     account_type = models.CharField(max_length=3,choices=ACC_TYPE,default='USR')
-
-    #profile_image TODO
+    profile_image = models.ImageField(blank=True,null=True,upload_to='profile_img/')
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []

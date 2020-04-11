@@ -17,8 +17,8 @@ from django.template.loader import render_to_string
 import json
 
 from account.activation_tokens import account_activation_token
-from .serializers import AccountRegisterSerializer, AccountListSerializer, AccountDetailSerializer, AccountChangePasswordSerializer
-from account.models import Account, Company, User
+from .serializers import AccountRegisterSerializer, AccountListSerializer, AccountDetailSerializer, AccountChangePasswordSerializer, PostCodeSerializer, PostCodeCreateSerializer
+from account.models import Account, Company, User, PostCode
 
 from .permissions import AnonPermissionOnly, IsOwnerOrReadOnly
 
@@ -40,7 +40,7 @@ class AuthView(APIView):
         account = authenticate(email=email, password=password)
 
         qs = Account.objects.filter(email__iexact=email)
-        qs = qs.filter(is_active__iexact=True)
+        qs = qs.filter(is_active=True)
 
         if qs.count() == 1:
             account_obj = qs.first()
@@ -75,14 +75,23 @@ class RegisterAPIView(generics.CreateAPIView):
 
         if serializer.is_valid(raise_exception=True):
             address = serializer.validated_data.get('address', None)
+            
             city = serializer.validated_data.get('city', None)
-            post_code = serializer.validated_data.get('post_code', None)
+            zip_code = serializer.validated_data.get('zip_code', None)
+
             phone_number = serializer.validated_data.get('phone_number', None)
             account_type = serializer.validated_data.get('account_type', None)
+            image = serializer.validated_data.get('profile_image', None)
+
+            if city is not None:
+                post_code_obj = PostCode.objects.get(city=city)
+            else:
+                post_code_obj = PostCode.objects.get(zip_code=zip_code)
 
             account_obj = Account(
-                email=(serializer.validated_data.get('email')), address=address, city=city, post_code=post_code, phone_number=phone_number, account_type=account_type)
+                email=(serializer.validated_data.get('email')), address=address, post_code_id=post_code_obj, phone_number=phone_number, account_type=account_type)
             account_obj.set_password(serializer.validated_data.get('password'))
+            account_obj.profile_image = image
             account_obj.is_active = False
 
             account_obj.save()
@@ -206,9 +215,15 @@ class AccountDetailApiView(
             # account info
             address = serializer.validated_data.get('address', None)
             city = serializer.validated_data.get('city', None)
-            post_code = serializer.validated_data.get('post_code', None)
+            zip_code = serializer.validated_data.get('zip_code', None)
             phone_number = serializer.validated_data.get('phone_number', None)
             account_type = serializer.validated_data.get('account_type')
+            image = serializer.validated_data.get('profile_image', None)
+
+            if city is not None:
+                post_code_obj = PostCode.objects.get(city=city)
+            else:
+                post_code_obj = PostCode.objects.get(zip_code=zip_code)
             # user info - if exist
             first_name = serializer.validated_data.get('first_name')
             last_name = serializer.validated_data.get('last_name')
@@ -244,10 +259,15 @@ class AccountDetailApiView(
                     company_obj.save()
 
             account.address = address
-            account.city = city
-            account.post_code = post_code
+            account.post_code_id = post_code_obj
             account.phone_number = phone_number
             account.account_type = account_type
+            if account.profile_image is None:
+                account.profile_image = image    
+            else:
+                account.profile_image.delete(save=False)
+                account.profile_image = image
+
             account.save()
 
         return JsonResponse({"message": "Account has been updated successfully."}, status=200)
@@ -287,3 +307,47 @@ class AccountChangePassword(
             account_obj.save()
 
             return JsonResponse({"message": "Password has been changed successfully."}, status=200)
+
+class PostCodeListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    serializer_class = PostCodeSerializer
+    
+    def get_queryset(self, *args, **kwargs):
+        zip_code_query = self.request.GET.get('zip_code')
+        city_query = self.request.GET.get('city')
+
+        queryset_list = PostCode.objects.all()    
+        if zip_code_query: 
+            queryset_list = queryset_list.filter(
+                Q(zip_code__icontains=zip_code_query)
+            ).distinct()
+        if city_query:
+            queryset_list = queryset_list.filter(
+                Q(city__icontains=city_query)
+            ).distinct()
+
+        return queryset_list
+
+class PostCodeDetailView(generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated,]
+    serializer_class = PostCodeCreateSerializer
+    queryset = PostCode.objects.all() 
+
+    def get_serializer_class(self):
+        return PostCodeCreateSerializer
+
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            zip_code = serializer.validated_data.get('zip_code', None)
+            city = serializer.validated_data.get('city', None)
+
+            post_code_obj = PostCode(zip_code=zip_code,city=city)
+            post_code_obj.save()
+            
+            return Response({"detail": "Post code has been created."},status=201)

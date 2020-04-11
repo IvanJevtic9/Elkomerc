@@ -1,12 +1,29 @@
 from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from import_export.admin import ImportExportModelAdmin
 
-from .models import Account, User, Company
+from .models import Account, User, Company, PostCode
 
 from .forms import (UserForm,
                     CompanyForm,
-                    AccountCreateForm)
+                    AccountCreateForm,
+                    PostForm)
+
+class PostCodeAdmin(ImportExportModelAdmin):
+    form = PostForm
+    list_display = ('id', 'zip_code', 'city')
+    fieldsets = (
+        ("General info", {'fields': ('zip_code', 'city')}),
+    )
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('zip_code', 'city'),
+        }),
+    )
+    search_fields = ('zip_code', 'city',)
+    ordering = ('zip_code', 'city',)
 
 class UserAdmin(admin.ModelAdmin):
     form = UserForm
@@ -45,21 +62,21 @@ class CompanyAdmin(admin.ModelAdmin):
 class AccountAdmin(BaseUserAdmin):
     add_form = AccountCreateForm
 
-    list_display = ('id', 'email', 'address', 'city', 'post_code', 'phone_number', 'account_type', 'is_staff')
+    list_display = ('id', 'email', 'address', 'post_code_id', 'phone_number', 'account_type', 'is_staff')
     list_filter = ('is_active', 'is_staff', 'is_superuser', 'account_type')
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('address', 'city', 'post_code', 'phone_number')}),
+        ('Personal info', {'fields': ('address', 'post_code_id', 'phone_number', 'profile_image')}),
         ('Permissions', {'fields': ('is_staff', 'is_superuser', 'is_active')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'password1', 'password2', 'address', 'city', 'post_code', 'phone_number'),
+            'fields': ('email', 'password1', 'password2', 'address', 'post_code_id', 'phone_number'),
         }),
     )
-    search_fields = ('email',)
+    search_fields = ('email','post_code_id__city')
     ordering = ('email',)
     filter_horizontal = ()
 
@@ -67,5 +84,6 @@ class AccountAdmin(BaseUserAdmin):
 admin.site.register(Account, AccountAdmin)
 admin.site.register(User, UserAdmin)
 admin.site.register(Company, CompanyAdmin)
+admin.site.register(PostCode, PostCodeAdmin)
 
 admin.site.unregister(Group)

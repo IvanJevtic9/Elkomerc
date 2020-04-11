@@ -12,12 +12,62 @@ from django.contrib.auth.hashers import check_password
 import datetime
 
 from rest_framework_jwt.settings import api_settings
-from account.models import Account, Company, User
+from account.models import Account, Company, User, PostCode
 
 jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
 jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
 jwt_response_payload_handler = api_settings.JWT_RESPONSE_PAYLOAD_HANDLER
 expire_delta = api_settings.JWT_EXPIRATION_DELTA
+
+
+class CompanySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Company
+        fields = [
+            'company_name',
+            'pib',
+            'fax'
+        ]
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            'first_name',
+            'last_name',
+            'date_of_birth'
+        ]
+
+class PostCodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PostCode
+        fields = [
+            'id',
+            'zip_code',
+            'city'
+        ]
+
+class PostCodeCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PostCode
+        fields = [
+            'zip_code',
+            'city'
+        ]
+    def validate_zip_code(self, value):
+        qs = PostCode.objects.filter(zip_code=value)
+        if qs.exists():
+            raise serializers.ValidationError(_("This zip code already exists."))
+
+        return value
+
+    def validate_city(self, value):
+        qs = PostCode.objects.filter(city=value)
+        if qs.exists():
+            raise serializers.ValidationError(_("This city already exists."))
+
+        return value
 
 class AccountRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -26,6 +76,7 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
         write_only=True, style={'input_type': 'password'})
     token = serializers.SerializerMethodField(read_only=True)
     expires = serializers.SerializerMethodField(read_only=True)
+    post_info = PostCodeSerializer(source='post_code_id',read_only=True)
 
     class Meta:
         model = Account
@@ -33,9 +84,9 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
             'email',
             'password',
             'password2',
+            'profile_image',
             'address',
-            'city',
-            'post_code',
+            'post_info',
             'phone_number',
             'account_type',
             'token',
@@ -107,46 +158,27 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
         ret = super(AccountRegisterSerializer, self).to_representation(obj)
 
         ret.pop('address')
-        ret.pop('post_code')
         ret.pop('city')
         ret.pop('phone_number')
         ret.pop('account_type')
 
         return ret
 
-
-class CompanySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Company
-        fields = [
-            'company_name',
-            'pib',
-            'fax'
-        ]
-
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = [
-            'first_name',
-            'last_name',
-            'date_of_birth'
-        ]
-
-
 class AccountListSerializer(serializers.ModelSerializer):
     company = CompanySerializer(read_only=True, many=True)
     user = UserSerializer(read_only=True, many=True)
     is_active = serializers.BooleanField(read_only=True)
+    uri = serializers.SerializerMethodField(read_only=True)
+    post_info = PostCodeSerializer(source='post_code_id',read_only=True)
     class Meta:
         model = Account
         fields = [
             'id',
             'email',
+            'profile_image',
+            'uri',
+            'post_info',
             'address',
-            'city',
-            'post_code',
             'phone_number',
             'account_type',
             'company',
@@ -154,19 +186,24 @@ class AccountListSerializer(serializers.ModelSerializer):
             'is_active'
         ]
 
+    def get_uri(self, obj):
+        request = self.context.get('request')
+        return api_reverse("account:detail", kwargs={"id": obj.id}, request=request)
+
 class AccountDetailSerializer(serializers.ModelSerializer):
     company = CompanySerializer(read_only=True, many=True)
     user = UserSerializer(read_only=True, many=True)
     email = serializers.EmailField(read_only=True)
     is_active = serializers.BooleanField(read_only=True)
+    post_info = PostCodeSerializer(source='post_code_id',read_only=True)
     class Meta:
         model = Account
         fields = [
             'id',
             'email',
+            'profile_image',
             'address',
-            'city',
-            'post_code',
+            'post_info',
             'phone_number',
             'account_type',
             'company',

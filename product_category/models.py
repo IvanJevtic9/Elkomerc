@@ -3,7 +3,6 @@ from django.db import models
 # Create your models here.
 
 class Category(models.Model):
-    category_id = models.AutoField(primary_key=True)
     category_name = models.CharField(max_length=30,unique=True)
 
     class Meta:
@@ -14,8 +13,7 @@ class Category(models.Model):
         return self.category_name
 
 class SubCategory(models.Model):
-    sub_category_id = models.AutoField(primary_key=True)
-    category_id = models.ForeignKey('Category',to_field='category_id',on_delete=models.CASCADE,related_name='sub_category')
+    category_id = models.ForeignKey('Category',to_field='id',on_delete=models.CASCADE,related_name='sub_category')
     sub_category_name = models.CharField(max_length=30,unique=True)
 
     class Meta:
@@ -32,7 +30,6 @@ class Feature(models.Model):
         ('DEC', 'Decimal'),
         ('BOL', 'Bolean'),
     )
-    feature_id = models.AutoField(primary_key=True)
     data_type = models.CharField(max_length=3,choices=DATA_TYPE,default='STR')
     feature_name = models.CharField(max_length=20,unique=True)
 
@@ -44,8 +41,8 @@ class Feature(models.Model):
         return self.feature_name     
 
 class FloorFeature(models.Model):
-    sub_category_id = models.ForeignKey('SubCategory',to_field='sub_category_id',on_delete=models.CASCADE,related_name='floor_feture_cat')
-    feature_id = models.ForeignKey('Feature',to_field='feature_id',on_delete=models.CASCADE,related_name='floor_feature_fea')
+    sub_category_id = models.ForeignKey('SubCategory',to_field='id',on_delete=models.CASCADE,related_name='floor_feture_cat')
+    feature_id = models.ForeignKey('Feature',to_field='id',on_delete=models.CASCADE,related_name='floor_feature_fea')
 
     class Model:
         verbose_name = "Floor-Feature"

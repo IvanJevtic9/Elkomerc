@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'account',
     'product_category',
+    'product',
     'import_export',
 ]
 

@@ -39,18 +39,18 @@ class ProducerAdmin(ImportExportModelAdmin):
 
 class ProducerImageAdmin(ImportExportModelAdmin):
     form = ProducerImageForm
-    list_display = ('id', 'producer_id', 'image', 'image_name', 'content_type', 'size', 'height', 'width')
+    list_display = ('id', 'producer_id', 'image', 'image_name', 'purpose', 'content_type', 'size', 'height', 'width')
     fieldsets = (
-        ("General info", {'fields': ('producer_id', 'image', 'image_name')}),
+        ("General info", {'fields': ('producer_id', 'image', 'image_name', 'purpose')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('producer_id', 'image', 'image_name'),
+            'fields': ('producer_id', 'image', 'image_name', 'purpose',),
         }),
     )
-    search_fields = ('id', 'producer_id', 'image', 'image_name', 'content_type', 'size', 'height', 'width',)
-    ordering = ('id', 'producer_id', 'image', 'image_name', 'content_type', 'size', 'height', 'width',)
+    search_fields = ('id', 'producer_id', 'image', 'image_name', 'purpose', 'content_type', 'size', 'height', 'width',)
+    ordering = ('id', 'producer_id', 'image', 'image_name', 'purpose', 'content_type', 'size', 'height', 'width',)
 
 class ProgramAdmin(ImportExportModelAdmin):
     form = ProgramForm
@@ -114,18 +114,18 @@ class ArticleAdmin(ImportExportModelAdmin):
 
 class ArticleImageAdmin(ImportExportModelAdmin):
     form = ArticleImageForm
-    list_display = ('id', 'article_id', 'image', 'image_name', 'content_type', 'size', 'height', 'width')
+    list_display = ('id', 'article_id', 'image', 'image_name', 'purpose', 'content_type', 'size', 'height', 'width')
     fieldsets = (
-        ("General info", {'fields': ('article_id', 'image', 'image_name')}),
+        ("General info", {'fields': ('article_id', 'image', 'image_name', 'purpose',)}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('article_id', 'image', 'image_name'),
+            'fields': ('article_id', 'image', 'image_name', 'purpose',),
         }),
     )
-    search_fields = ('id', 'article_id', 'image', 'image_name', 'content_type', 'size', 'height', 'width',)
-    ordering = ('id', 'article_id', 'image', 'image_name', 'content_type', 'size', 'height', 'width',) 
+    search_fields = ('id', 'article_id', 'image', 'image_name', 'purpose', 'content_type', 'size', 'height', 'width',)
+    ordering = ('id', 'article_id', 'image', 'image_name', 'purpose', 'content_type', 'size', 'height', 'width',) 
 
 admin.site.register(Producer, ProducerAdmin)
 admin.site.register(ProducerImage, ProducerImageAdmin)

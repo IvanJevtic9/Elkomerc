@@ -22,6 +22,7 @@ class ProducerImage(models.Model):
     size = models.IntegerField(blank=True,null=True)
     height = models.IntegerField(blank=True,null=True)
     width = models.IntegerField(blank=True,null=True)
+    purpose = models.CharField(max_length=20,blank=True,null=True)
 
     class Meta:
         verbose_name = "Producer image"
@@ -98,6 +99,7 @@ class ArticleImage(models.Model):
     size = models.IntegerField(blank=True,null=True)
     height = models.IntegerField(blank=True,null=True)
     width = models.IntegerField(blank=True,null=True)
+    purpose = models.CharField(max_length=20,blank=True,null=True)
 
     class Meta:
         verbose_name = "Article image"

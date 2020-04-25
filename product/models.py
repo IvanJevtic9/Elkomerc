@@ -45,10 +45,10 @@ class Program(models.Model):
 class Product(models.Model):
     MEASURE_TYPE = (
         ("M","Meter"),
+        ("K", "Kilogram"),
         ("P","Piece")
     )
-
-    product_name = models.CharField(max_length=60)
+    
     description = models.TextField(max_length=100,blank=True,null=True)
     unit_of_measure = models.CharField(max_length=1,choices=MEASURE_TYPE,default="P")
     sub_category_id = models.ForeignKey('product_category.SubCategory',to_field='id',on_delete=models.CASCADE,related_name='product')
@@ -58,10 +58,10 @@ class Product(models.Model):
         verbose_name_plural = "Products"
 
     def __str__(self):
-        return self.product_name
+        return self.description
 
 class Attribute(models.Model):
-    product_id = models.ForeignKey('Product',to_field='id',on_delete=models.CASCADE,related_name='attribute_product')
+    article_id = models.ForeignKey('Article',to_field='id',on_delete=models.CASCADE,related_name='attribute_article')
     feature_id = models.ForeignKey('product_category.Feature',to_field='id',on_delete=models.CASCADE,related_name='attribute_feature')
     value = models.TextField(max_length=30)
 
@@ -78,6 +78,7 @@ class Article(models.Model):
         ('EUR', 'Euro')
     )
 
+    article_name = models.CharField(max_length=80)
     product_id = models.ForeignKey('Product',to_field='id',on_delete=models.CASCADE,related_name='article')
     price = models.DecimalField(max_digits=20,decimal_places=2)
     currency = models.CharField(max_length=3,choices=CURRENCY_TYPE,default='RSD')
@@ -89,7 +90,7 @@ class Article(models.Model):
         verbose_name_plural = "Articles"
 
     def __str__(self):
-        return self.product_id.product_name    
+        return self.article_name    
 
 class ArticleImage(models.Model):
     article_id = models.ForeignKey('Article', to_field='id',on_delete=models.CASCADE,related_name='image')

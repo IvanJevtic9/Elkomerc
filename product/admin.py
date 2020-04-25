@@ -69,48 +69,48 @@ class ProgramAdmin(ImportExportModelAdmin):
 
 class ProductAdmin(ImportExportModelAdmin):
     form = ProductForm
-    list_display = ('id', 'product_name', 'sub_category_id', 'description', 'unit_of_measure')
+    list_display = ('id', 'sub_category_id', 'description', 'unit_of_measure')
     fieldsets = (
-        ("General info", {'fields': ('product_name', 'sub_category_id', 'description', 'unit_of_measure')}),
+        ("General info", {'fields': ('sub_category_id', 'description', 'unit_of_measure')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('product_name', 'sub_category_id', 'description', 'unit_of_measure'),
+            'fields': ('sub_category_id', 'description', 'unit_of_measure'),
         }),
     )
-    search_fields = ('id', 'product_name', 'sub_category_id', 'description', 'unit_of_measure',)
-    ordering = ('id', 'product_name', 'sub_category_id', 'description', 'unit_of_measure',) 
+    search_fields = ('id', 'sub_category_id', 'description', 'unit_of_measure',)
+    ordering = ('id', 'sub_category_id', 'description', 'unit_of_measure',) 
 
 class AttributeAdmin(ImportExportModelAdmin):
     form = AttributeForm
-    list_display = ('id', 'product_id', 'feature_id', 'value')
+    list_display = ('id', 'article_id', 'feature_id', 'value')
     fieldsets = (
-        ("General info", {'fields': ('product_id', 'feature_id', 'value')}),
+        ("General info", {'fields': ('article_id', 'feature_id', 'value')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('product_id', 'feature_id', 'value'),
+            'fields': ('article_id', 'feature_id', 'value'),
         }),
     )
-    search_fields = ('id', 'product_id', 'feature_id', 'value',)
-    ordering = ('id', 'product_id', 'feature_id', 'value',) 
+    search_fields = ('id', 'article_id', 'feature_id', 'value',)
+    ordering = ('id', 'article_id', 'feature_id', 'value',) 
 
 class ArticleAdmin(ImportExportModelAdmin):
     form = ArticleForm
-    list_display = ('id', 'product_id', 'program_id', 'price', 'currency', 'is_available')
+    list_display = ('id', 'article_name', 'product_id', 'program_id', 'price', 'currency', 'is_available')
     fieldsets = (
-        ("General info", {'fields': ('product_id', 'program_id', 'price', 'currency', 'is_available')}),
+        ("General info", {'fields': ('product_id', 'article_name', 'program_id', 'price', 'currency', 'is_available')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('product_id', 'program_id', 'price', 'currency', 'is_available'),
+            'fields': ('product_id', 'article_name', 'program_id', 'price', 'currency', 'is_available'),
         }),
     )
-    search_fields = ('id', 'product_id', 'program_id', 'price', 'currency', 'is_available',)
-    ordering = ('id', 'product_id', 'program_id', 'price', 'currency', 'is_available',) 
+    search_fields = ('id', 'product_id', 'article_name', 'program_id', 'price', 'currency', 'is_available',)
+    ordering = ('id', 'product_id', 'article_name', 'program_id', 'price', 'currency', 'is_available',) 
 
 class ArticleImageAdmin(ImportExportModelAdmin):
     form = ArticleImageForm

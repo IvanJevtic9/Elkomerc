@@ -8,16 +8,14 @@ from product_category.models import Category, SubCategory
 
 class ProductSerializer(serializers.ModelSerializer):
     category = serializers.SerializerMethodField(read_only=True)
-    attributes = serializers.SerializerMethodField(read_only=True)
     unit_of_measure = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Product
         fields = [
             'id',
-            'product_name',
+            'description',
             'category',
-            'unit_of_measure',
-            'attributes'
+            'unit_of_measure'
         ]
 
     def get_category(self, obj):
@@ -29,21 +27,6 @@ class ProductSerializer(serializers.ModelSerializer):
         }
 
         return category
-
-
-    def get_attributes(self, obj):
-        attributes = []
-        list_att = Attribute.objects.filter(product_id=obj.id)
-        
-        for l in list_att:
-            obj_att = {
-                "attribute_id": l.id,
-                "attribute_name": l.feature_id.feature_name,
-                "value": l.value
-            }     
-            attributes.append(obj_att)
-
-        return attributes
 
     def get_unit_of_measure(self, obj):
         return obj.get_unit_of_measure_display()
@@ -123,12 +106,15 @@ class ArticleSerializer(serializers.ModelSerializer):
     program_info = serializers.SerializerMethodField(read_only=True)
     article_images = serializers.SerializerMethodField(read_only=True)
     currency = serializers.SerializerMethodField(read_only=True)
+    attributes = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Article
         fields = [
             'id',
+            'article_name',
             'product_info',
             'program_info',
+            'attributes',
             'article_images',
             'price',
             'currency',
@@ -165,4 +151,16 @@ class ArticleSerializer(serializers.ModelSerializer):
     def get_currency(self, obj):
         return obj.get_currency_display()
 
-                   
+    def get_attributes(self, obj):
+        attributes = []
+        list_att = Attribute.objects.filter(article_id=obj.id)
+        
+        for l in list_att:
+            obj_att = {
+                "attribute_id": l.id,
+                "attribute_name": l.feature_id.feature_name,
+                "value": l.value
+            }     
+            attributes.append(obj_att)
+
+        return attributes               

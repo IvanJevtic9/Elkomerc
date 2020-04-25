@@ -8,15 +8,6 @@ from django.contrib.auth import authenticate
 from .serializers import ProductSerializer, ArticleSerializer, ProducerSerializer, ProducerListSerializer 
 from product.models import Product, Article, Producer
 
-class ProductListApiView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    serializer_class = ProductSerializer
-
-    def get_queryset(self, *args, **kwargs):
-        queryset_list = Product.objects.all()
-
-        return queryset_list
-
 class ArticleListApiView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     serializer_class = ArticleSerializer

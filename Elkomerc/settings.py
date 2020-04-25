@@ -27,7 +27,6 @@ SECRET_KEY = '4#*bbf%pl&1_s9n4%(iqf=8twn5w)^+^r&#6nzm3q4cjn6xz^o'
 DEBUG = True
 
 ALLOWED_HOSTS = []
-AUTH_USER_MODEL = 'account.Account'
 
 # Application definition
 
@@ -40,11 +39,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'six',
     'rest_framework',
+    'import_export',
+    'rest_framework_swagger',
+    
+    # local apps
     'account',
     'product_category',
     'product',
-    'import_export',
 ]
+
+AUTH_USER_MODEL = 'account.Account'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -130,7 +134,8 @@ EMAIL_HOST_PASSWORD = 'Alingconel1412'
 EMAIL_PORT = 587
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-
+#Log with facebook , email
+SITE_ID = 1
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
@@ -154,8 +159,8 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter'
     ),
     'DEFAULT_PAGINATION_CLASS': 'Elkomerc.pagination.CFEAPIPagination',
-    'SEARCH_PARAM': 'q',
-    'ORDERING_PARAM': 'ordering'
+    'ORDERING_PARAM': 'ordering',
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema' 
 }
 
 JWT_AUTH = {

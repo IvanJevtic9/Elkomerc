@@ -64,7 +64,6 @@ class ProductForm(forms.ModelForm):
         model = Product
         fields = [
             'id',
-            'product_name',
             'sub_category_id',
             'description',
             'unit_of_measure'
@@ -75,7 +74,7 @@ class AttributeForm(forms.ModelForm):
         model = Attribute
         fields = [
             'id',
-            'product_id',
+            'article_id',
             'feature_id',
             'value'
         ]
@@ -85,6 +84,7 @@ class ArticleForm(forms.ModelForm):
         model = Article
         fields = [
             'id',
+            'article_name',
             'program_id',
             'product_id',
             'price',

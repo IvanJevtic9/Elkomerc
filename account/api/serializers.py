@@ -8,6 +8,7 @@ from django.core import exceptions
 from django.contrib.auth import password_validation as validators
 from django.contrib.auth.hashers import check_password
 
+from django.core.validators import validate_email
 
 import datetime
 
@@ -301,4 +302,13 @@ class AccountChangePasswordSerializer(serializers.ModelSerializer):
         email = email = data.get('email')
         account_obj = Account.objects.get(email=email)
         
-        return account_obj    
+        return account_obj
+
+class AccountResetPasswordSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(write_only=True,validators=[validate_email])
+    class Meta:
+        model = Account
+        fields = [
+            'email'
+        ]
+

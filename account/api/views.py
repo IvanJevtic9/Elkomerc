@@ -16,8 +16,8 @@ from django.utils.encoding import force_bytes, force_text
 from django.template.loader import render_to_string
 import json
 
-from account.activation_tokens import account_activation_token
-from .serializers import AccountRegisterSerializer, AccountListSerializer, AccountDetailSerializer, AccountChangePasswordSerializer, PostCodeSerializer, PostCodeCreateSerializer
+from account.activation_tokens import account_activation_token, account_change_password_token
+from .serializers import AccountRegisterSerializer, AccountListSerializer, AccountDetailSerializer, AccountChangePasswordSerializer, PostCodeSerializer, PostCodeCreateSerializer, AccountResetPasswordSerializer
 from account.models import Account, Company, User, PostCode
 
 from .permissions import AnonPermissionOnly, IsOwnerOrReadOnly
@@ -75,7 +75,7 @@ class RegisterAPIView(generics.CreateAPIView):
 
         if serializer.is_valid(raise_exception=True):
             address = serializer.validated_data.get('address', None)
-            
+
             city = serializer.validated_data.get('city', None)
             zip_code = serializer.validated_data.get('zip_code', None)
 
@@ -119,18 +119,19 @@ class RegisterAPIView(generics.CreateAPIView):
             message = render_to_string('acc_active_email.html', {
                 'account': account_obj,
                 'domain': current_site.domain,
-                'uid':urlsafe_base64_encode(force_bytes(account_obj.id)),
-                'token':account_activation_token.make_token(account_obj),
+                'uid': urlsafe_base64_encode(force_bytes(account_obj.id)),
+                'token': account_activation_token.make_token(account_obj),
             })
 
             to_email = serializer.validated_data.get('email')
             email = EmailMessage(
-                        mail_subject, message, to=[to_email]
+                mail_subject, message, to=[to_email]
             )
             email.send()
 
             return JsonResponse({"message": "Please confirm your email address to complete the registration."}, status=200)
-            
+
+
 def activate(request, uidb64, token):
     try:
         uid = force_text(urlsafe_base64_decode(uidb64))
@@ -141,9 +142,57 @@ def activate(request, uidb64, token):
         account_obj.is_active = True
         account_obj.save()
         # return redirect('home')
-        return HttpResponse('Thank you for your email confirmation. Now you can login your account.')
+        return JsonResponse({"message": "Thank you for your email confirmation. Now you can login on your account."}, status=200)
     else:
-        return HttpResponse('Activation link is invalid!')
+        return JsonResponse({"message": "Activation link is invalid!"}, status=500)
+
+
+class ChangePasswordViaEmailAPIView(generics.CreateAPIView):
+    serializer_class = AccountResetPasswordSerializer
+    permission_classes = [AnonPermissionOnly, ]
+
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)
+
+    def get_serializer_class(self):
+        return AccountResetPasswordSerializer
+
+    def create(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            to_email = serializer.validated_data.get('email')
+            account_obj = Account.objects.get(email=to_email)
+
+            current_site = get_current_site(request)
+            mail_subject = 'Change password.'
+            message = render_to_string('acc_change_password.html', {
+                'account': account_obj,
+                'domain': current_site.domain,
+                'uid': urlsafe_base64_encode(force_bytes(account_obj.id)),
+                'token': account_change_password_token.make_token(account_obj),
+            })
+
+            email = EmailMessage(
+                mail_subject, message, to=[to_email]
+            )
+            email.send()
+
+        return JsonResponse({"message": "Please check your email address to reset password."}, status=200)
+
+def reset_password(request, uidb64, token):
+    try:
+        uid = force_text(urlsafe_base64_decode(uidb64))
+        account_obj = Account.objects.get(id=uid)
+    except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
+        account_obj = None
+    if account_obj is not None and account_change_password_token.check_token(account_obj, token):
+        
+        # return redirect('home')
+        return JsonResponse({"message": "Reset password"}, status=200)
+    else:
+        return JsonResponse({"message": "Activation link is invalid!"}, status=500)
 
 class AccountListApiView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, ]
@@ -263,7 +312,7 @@ class AccountDetailApiView(
             account.phone_number = phone_number
             account.account_type = account_type
             if account.profile_image is None:
-                account.profile_image = image    
+                account.profile_image = image
             else:
                 account.profile_image.delete(save=False)
                 account.profile_image = image
@@ -308,16 +357,17 @@ class AccountChangePassword(
 
             return JsonResponse({"message": "Password has been changed successfully."}, status=200)
 
+
 class PostCodeListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     serializer_class = PostCodeSerializer
-    
+
     def get_queryset(self, *args, **kwargs):
         zip_code_query = self.request.GET.get('zip_code')
         city_query = self.request.GET.get('city')
 
-        queryset_list = PostCode.objects.all()    
-        if zip_code_query: 
+        queryset_list = PostCode.objects.all()
+        if zip_code_query:
             queryset_list = queryset_list.filter(
                 Q(zip_code__icontains=zip_code_query)
             ).distinct()
@@ -328,10 +378,11 @@ class PostCodeListView(generics.ListAPIView):
 
         return queryset_list
 
+
 class PostCodeDetailView(generics.CreateAPIView):
-    permission_classes = [permissions.IsAuthenticated,]
+    permission_classes = [permissions.IsAuthenticated, ]
     serializer_class = PostCodeCreateSerializer
-    queryset = PostCode.objects.all() 
+    queryset = PostCode.objects.all()
 
     def get_serializer_class(self):
         return PostCodeCreateSerializer
@@ -347,7 +398,7 @@ class PostCodeDetailView(generics.CreateAPIView):
             zip_code = serializer.validated_data.get('zip_code', None)
             city = serializer.validated_data.get('city', None)
 
-            post_code_obj = PostCode(zip_code=zip_code,city=city)
+            post_code_obj = PostCode(zip_code=zip_code, city=city)
             post_code_obj.save()
-            
-            return Response({"detail": "Post code has been created."},status=201)
+
+            return Response({"detail": "Post code has been created."}, status=201)

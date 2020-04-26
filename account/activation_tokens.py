@@ -8,3 +8,4 @@ class TokenGenerator(PasswordResetTokenGenerator):
             text_type(account.is_active)
         )
 account_activation_token = TokenGenerator()
+account_change_password_token = TokenGenerator()

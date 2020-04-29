@@ -5,7 +5,6 @@ from import_export.admin import ImportExportModelAdmin
 from .models import (Producer,
                      ProducerImage,
                      Program,
-                     Product,
                      Attribute,
                      Article,
                      ArticleImage)
@@ -13,7 +12,6 @@ from .models import (Producer,
 from .forms import (ProducerForm,
                     ProducerImageForm,
                     ProgramForm,
-                    ProductForm,
                     AttributeForm,
                     ArticleForm,
                     ArticleImageForm)
@@ -67,21 +65,6 @@ class ProgramAdmin(ImportExportModelAdmin):
     search_fields = ('id', 'program_name', 'producer_id',)
     ordering = ('id', 'program_name', 'producer_id',) 
 
-class ProductAdmin(ImportExportModelAdmin):
-    form = ProductForm
-    list_display = ('id', 'sub_category_id', 'description', 'unit_of_measure')
-    fieldsets = (
-        ("General info", {'fields': ('sub_category_id', 'description', 'unit_of_measure')}),
-    )
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('sub_category_id', 'description', 'unit_of_measure'),
-        }),
-    )
-    search_fields = ('id', 'sub_category_id', 'description', 'unit_of_measure',)
-    ordering = ('id', 'sub_category_id', 'description', 'unit_of_measure',) 
-
 class AttributeAdmin(ImportExportModelAdmin):
     form = AttributeForm
     list_display = ('id', 'article_id', 'feature_id', 'value')
@@ -99,18 +82,18 @@ class AttributeAdmin(ImportExportModelAdmin):
 
 class ArticleAdmin(ImportExportModelAdmin):
     form = ArticleForm
-    list_display = ('id', 'article_name', 'product_id', 'program_id', 'price', 'currency', 'is_available')
+    list_display = ('id', 'article_name', 'sub_category_id', 'program_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available')
     fieldsets = (
-        ("General info", {'fields': ('product_id', 'article_name', 'program_id', 'price', 'currency', 'is_available')}),
+        ("General info", {'fields': ('article_name', 'sub_category_id', 'program_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('product_id', 'article_name', 'program_id', 'price', 'currency', 'is_available'),
+            'fields': ('article_name', 'sub_category_id', 'program_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available'),
         }),
     )
-    search_fields = ('id', 'product_id', 'article_name', 'program_id', 'price', 'currency', 'is_available',)
-    ordering = ('id', 'product_id', 'article_name', 'program_id', 'price', 'currency', 'is_available',) 
+    search_fields = ('id', 'article_name', 'sub_category_id', 'program_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available',)
+    ordering = ('id', 'article_name', 'sub_category_id', 'program_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available',) 
 
 class ArticleImageAdmin(ImportExportModelAdmin):
     form = ArticleImageForm
@@ -130,7 +113,6 @@ class ArticleImageAdmin(ImportExportModelAdmin):
 admin.site.register(Producer, ProducerAdmin)
 admin.site.register(ProducerImage, ProducerImageAdmin)
 admin.site.register(Program, ProgramAdmin)
-admin.site.register(Product, ProductAdmin)
 admin.site.register(Attribute, AttributeAdmin)
 admin.site.register(Article, ArticleAdmin)
 admin.site.register(ArticleImage, ArticleImageAdmin)

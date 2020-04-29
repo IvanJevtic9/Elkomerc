@@ -3,33 +3,8 @@ from rest_framework.reverse import reverse as api_reverse
 
 from django.utils.translation import ugettext_lazy as _
 
-from product.models import Product, Attribute, Article, ArticleImage, Producer, ProducerImage, Program
+from product.models import Attribute, Article, ArticleImage, Producer, ProducerImage, Program
 from product_category.models import Category, SubCategory
-
-class ProductSerializer(serializers.ModelSerializer):
-    category = serializers.SerializerMethodField(read_only=True)
-    unit_of_measure = serializers.SerializerMethodField(read_only=True)
-    class Meta:
-        model = Product
-        fields = [
-            'id',
-            'description',
-            'category',
-            'unit_of_measure'
-        ]
-
-    def get_category(self, obj):
-        category = {
-            "category_id": obj.sub_category_id.category_id.id,
-            "category_name": obj.sub_category_id.category_id.category_name,
-            "sub_category_id": obj.sub_category_id.id,
-            "sub_category_name": obj.sub_category_id.sub_category_name
-        }
-
-        return category
-
-    def get_unit_of_measure(self, obj):
-        return obj.get_unit_of_measure_display()
 
 class ProgramSerializer(serializers.ModelSerializer):
     class Meta:
@@ -102,20 +77,23 @@ class ProducerListSerializer(serializers.ModelSerializer):
         return api_reverse("product:detail", kwargs={"id": obj.id}, request=request)
 
 class ArticleSerializer(serializers.ModelSerializer):
-    product_info = ProductSerializer(read_only=True,source='product_id')
     program_info = serializers.SerializerMethodField(read_only=True)
     article_images = serializers.SerializerMethodField(read_only=True)
     currency = serializers.SerializerMethodField(read_only=True)
     attributes = serializers.SerializerMethodField(read_only=True)
+    category = serializers.SerializerMethodField(read_only=True)
+    unit_of_measure = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Article
         fields = [
             'id',
             'article_name',
-            'product_info',
+            'description',
             'program_info',
+            'category',
             'attributes',
             'article_images',
+            'unit_of_measure',
             'price',
             'currency',
             'is_available'
@@ -123,12 +101,14 @@ class ArticleSerializer(serializers.ModelSerializer):
 
     def get_program_info(self, obj):
         request = self.context.get('request')
-        program_info = {
-            "program_id": obj.program_id.id,
-            "program_name": obj.program_id.program_name,
-            "producer_uri": api_reverse("product:detail", kwargs={"id": obj.program_id.producer_id.id}, request=request)
-
-        }
+        program_info = {}
+        if(obj.program_id is not None):
+            program_info = {
+                "program_id": obj.program_id.id,
+                "program_name": obj.program_id.program_name,
+                "producer_uri": api_reverse("product:detail", kwargs={"id": obj.program_id.producer_id.id}, request=request)
+            }
+        
         return program_info
 
     def get_article_images(self, obj):
@@ -155,6 +135,7 @@ class ArticleSerializer(serializers.ModelSerializer):
         attributes = []
         list_att = Attribute.objects.filter(article_id=obj.id)
         
+
         for l in list_att:
             obj_att = {
                 "attribute_id": l.id,
@@ -164,3 +145,16 @@ class ArticleSerializer(serializers.ModelSerializer):
             attributes.append(obj_att)
 
         return attributes               
+
+    def get_category(self, obj):
+        category = {
+            "category_id": obj.sub_category_id.category_id.id,
+            "category_name": obj.sub_category_id.category_id.category_name,
+            "sub_category_id": obj.sub_category_id.id,
+            "sub_category_name": obj.sub_category_id.sub_category_name
+        }
+
+        return category
+
+    def get_unit_of_measure(self, obj):
+        return obj.get_unit_of_measure_display()

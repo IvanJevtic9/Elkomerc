@@ -5,8 +5,8 @@ from rest_framework_jwt.settings import api_settings
 from django.db.models import Q
 from django.contrib.auth import authenticate
 
-from .serializers import ProductSerializer, ArticleSerializer, ProducerSerializer, ProducerListSerializer 
-from product.models import Product, Article, Producer
+from .serializers import ArticleSerializer, ProducerSerializer, ProducerListSerializer 
+from product.models import Article, Producer
 
 class ArticleListApiView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]

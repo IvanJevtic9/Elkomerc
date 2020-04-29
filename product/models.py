@@ -42,24 +42,6 @@ class Program(models.Model):
     def __str__(self):
         return self.program_name
 
-class Product(models.Model):
-    MEASURE_TYPE = (
-        ("M","Meter"),
-        ("K", "Kilogram"),
-        ("P","Piece")
-    )
-    
-    description = models.TextField(max_length=100,blank=True,null=True)
-    unit_of_measure = models.CharField(max_length=1,choices=MEASURE_TYPE,default="P")
-    sub_category_id = models.ForeignKey('product_category.SubCategory',to_field='id',on_delete=models.CASCADE,related_name='product')
-
-    class Meta:
-        verbose_name = "Product"
-        verbose_name_plural = "Products"
-
-    def __str__(self):
-        return self.description
-
 class Attribute(models.Model):
     article_id = models.ForeignKey('Article',to_field='id',on_delete=models.CASCADE,related_name='attribute_article')
     feature_id = models.ForeignKey('product_category.Feature',to_field='id',on_delete=models.CASCADE,related_name='attribute_feature')
@@ -77,11 +59,18 @@ class Article(models.Model):
         ('RSD', 'Dinar'),
         ('EUR', 'Euro')
     )
+    MEASURE_TYPE = (
+        ("M","Meter"),
+        ("K", "Kilogram"),
+        ("P","Piece")
+    )
 
     article_name = models.CharField(max_length=80)
-    product_id = models.ForeignKey('Product',to_field='id',on_delete=models.CASCADE,related_name='article')
+    sub_category_id = models.ForeignKey('product_category.SubCategory',to_field='id',on_delete=models.CASCADE,related_name='article')
     price = models.DecimalField(max_digits=20,decimal_places=2)
     currency = models.CharField(max_length=3,choices=CURRENCY_TYPE,default='RSD')
+    unit_of_measure = models.CharField(max_length=1,choices=MEASURE_TYPE,default="P")
+    description = models.TextField(max_length=200,blank=True,null=True)
     program_id = models.ForeignKey('Program', to_field='id',on_delete=models.CASCADE,blank=True,null=True)
     is_available = models.BooleanField(default=True)
 

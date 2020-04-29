@@ -1,7 +1,7 @@
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 
-from .models import Producer, ProducerImage, Program, Product, Attribute, Article, ArticleImage
+from .models import Producer, ProducerImage, Program, Attribute, Article, ArticleImage
 
 class ProducerForm(forms.ModelForm):
     class Meta:
@@ -59,16 +59,6 @@ class ProgramForm(forms.ModelForm):
             'producer_id'
         ]
 
-class ProductForm(forms.ModelForm):
-    class Meta:
-        model = Product
-        fields = [
-            'id',
-            'sub_category_id',
-            'description',
-            'unit_of_measure'
-        ]
-
 class AttributeForm(forms.ModelForm):
     class Meta:
         model = Attribute
@@ -85,9 +75,11 @@ class ArticleForm(forms.ModelForm):
         fields = [
             'id',
             'article_name',
+            'sub_category_id',
             'program_id',
-            'product_id',
+            'description',
             'price',
+            'unit_of_measure',
             'currency',
             'is_available'
         ]

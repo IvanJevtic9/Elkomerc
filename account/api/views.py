@@ -84,9 +84,15 @@ class RegisterAPIView(generics.CreateAPIView):
             image = serializer.validated_data.get('profile_image', None)
 
             if city is not None:
-                post_code_obj = PostCode.objects.get(city=city)
+                try:
+                    post_code_obj = PostCode.objects.get(city=city)
+                except PostCode.DoesNotExist:
+                    post_code_obj = None
             else:
-                post_code_obj = PostCode.objects.get(zip_code=zip_code)
+                try:
+                    post_code_obj = PostCode.objects.get(zip_code=zip_code)
+                except PostCode.DoesNotExist:
+                    post_code_obj = None
 
             account_obj = Account(
                 email=(serializer.validated_data.get('email')), address=address, post_code_id=post_code_obj, phone_number=phone_number, account_type=account_type)

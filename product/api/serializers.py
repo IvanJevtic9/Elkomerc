@@ -158,3 +158,15 @@ class ArticleSerializer(serializers.ModelSerializer):
 
     def get_unit_of_measure(self, obj):
         return obj.get_unit_of_measure_display()
+
+class ArticleImportSerializer(serializers.ModelSerializer):
+    file_import = serializers.FileField(required=True)
+    class Meta:
+        model = Article
+        fields = [
+            'file_import'
+        ]
+
+    def validate_file_import(self, value):
+
+        return value            

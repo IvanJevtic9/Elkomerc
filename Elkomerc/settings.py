@@ -22,6 +22,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '4#*bbf%pl&1_s9n4%(iqf=8twn5w)^+^r&#6nzm3q4cjn6xz^o'
+SUPER_USER = os.environ.get('SUPERUSER')
+SUPER_USER_PASS = os.environ.get('SUPERUSER_PASS')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -90,7 +92,6 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators

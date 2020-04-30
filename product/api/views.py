@@ -4,9 +4,16 @@ from rest_framework_jwt.settings import api_settings
 
 from django.db.models import Q
 from django.contrib.auth import authenticate
+from django.http import JsonResponse
 
-from .serializers import ArticleSerializer, ProducerSerializer, ProducerListSerializer 
+from tablib import Dataset
+import pandas as pa
+
+from .serializers import ArticleSerializer, ProducerSerializer, ProducerListSerializer , ArticleImportSerializer
 from product.models import Article, Producer
+from product.resources import ArticleResource
+
+from account.api.permissions import AdminAuthenticationPermission
 
 class ArticleListApiView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -16,6 +23,37 @@ class ArticleListApiView(generics.ListAPIView):
         queryset_list = Article.objects.all()
 
         return queryset_list
+
+class ArticleImportApiView(generics.CreateAPIView):
+    permission_classes = [AdminAuthenticationPermission]
+    serializer_class = ArticleImportSerializer
+    queryset = Article.objects.all()
+
+    def get_serializer_class(self):
+        return ArticleImportSerializer
+
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            file_import = serializer.validated_data.get('file_import')
+
+            dataset = Dataset()
+            imported_data = dataset.load(request.FILES[file_import.field_name])
+
+            for art in imported_data.dict:
+                try:
+                    art_obj = Article.objects.get(id=art['SIFRA'])
+                    art_obj.price = art['PROD.CEN']
+                    art_obj.save()
+                except Article.DoesNotExist:
+                    pass
+
+            return JsonResponse({"message": "File has been imported successfully."}, status=200)
 
 class ProducerDetailApiView(generics.RetrieveAPIView): 
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]

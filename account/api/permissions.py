@@ -1,5 +1,5 @@
 from rest_framework import permissions
-
+from rest_framework import authentication
 class AnonPermissionOnly(permissions.BasePermission):
     """
     Global permission check for blacklisted IPs.
@@ -20,4 +20,12 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
         if request.user.is_anonymous:
             return False
 
-        return obj.user.core_filters.get('email').email == request.user.email    
+        return obj.user.core_filters.get('email').email == request.user.email
+
+class AdminAuthenticationPermission(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        user = request.user
+        if user and user.is_authenticated:
+            return user.is_superuser
+        return False            

@@ -33,15 +33,23 @@ class AuthView(APIView):
 
     def post(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            return Response({'detail': 'You are already authenticated'}, status=400)
+            return Response({'message': 'You are already authenticated'}, status=400)
         data = request.data
         email = data.get('email')
         password = data.get('password')
         account = authenticate(email=email, password=password)
+        
+        no_email = False
+        no_active = False
 
         qs = Account.objects.filter(email__iexact=email)
-        qs = qs.filter(is_active=True)
-
+        if(qs.count() == 0):
+            no_email = True 
+        else:
+            qs = qs.filter(is_active=True)
+            if qs.count() == 0:
+                no_active = True
+        
         if qs.count() == 1:
             account_obj = qs.first()
             if account_obj.check_password(password):
@@ -51,7 +59,13 @@ class AuthView(APIView):
                 response = jwt_response_payload_handler(token, email)
 
                 return Response(response)
-        return Response({"detail": "Invalid credentials."}, status=401)
+            else:
+                return Response({"message": "INVALID_PASSWORD"}, status=401)
+        else:
+            if no_email:
+                return Response({"message": "EMAIL_NOT_EXSIST"}, status=404)
+            if no_active:
+                return Response({"message": "USER_NOT_ACTIVE"}, status=404)
 
 
 class RegisterAPIView(generics.CreateAPIView):
@@ -407,4 +421,4 @@ class PostCodeDetailView(generics.CreateAPIView):
             post_code_obj = PostCode(zip_code=zip_code, city=city)
             post_code_obj.save()
 
-            return Response({"detail": "Post code has been created."}, status=201)
+            return Response({"message": "Post code has been created."}, status=201)

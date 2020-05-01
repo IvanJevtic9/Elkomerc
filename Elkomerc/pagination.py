@@ -1,4 +1,4 @@
 from rest_framework import pagination
 
 class CFEAPIPagination(pagination.PageNumberPagination):
-    page_size = 10
+    page_size = 20

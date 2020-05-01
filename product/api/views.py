@@ -22,6 +22,28 @@ class ArticleListApiView(generics.ListAPIView):
     def get_queryset(self, *args, **kwargs):
         queryset_list = Article.objects.all()
 
+        category_id_query = self.request.GET.get('category_id',None)
+        sub_category_id_query = self.request.GET.get('sub_category_id',None)  
+        category_name = self.request.GET.get('category_name',None)
+        sub_category_name = self.request.GET.get('sub_category_name',None)
+
+        if category_id_query:
+            queryset_list = queryset_list.filter(
+                Q(sub_category_id__category_id=category_id_query)                
+            ).distinct()
+        if sub_category_id_query:
+            queryset_list = queryset_list.filter(
+                Q(sub_category_id=sub_category_id_query)                
+            ).distinct()
+        if category_name:
+            queryset_list = queryset_list.filter(
+                Q(sub_category_id__category_id__category_name__iexact=category_name)                
+            ).distinct()
+        if sub_category_name:
+            queryset_list = queryset_list.filter(
+                Q(sub_category_id__sub_category_name__iexact=sub_category_name)                
+            ).distinct()            
+
         return queryset_list
 
 class ArticleImportApiView(generics.CreateAPIView):

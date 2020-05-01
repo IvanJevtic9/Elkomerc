@@ -11,6 +11,7 @@ from product_category.models import Category, SubCategory
 class CategoryListApiView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     serializer_class = CategorySerializer
+    pagination_class = None
 
     def get_queryset(self, *args, **kwargs):
         queryset_list = Category.objects.all()

@@ -5,8 +5,14 @@ from django.utils.translation import ugettext_lazy as _
 
 from django.core import exceptions
 
-from django.contrib.auth import password_validation as validators
+#from django.contrib.auth import password_validation as validators # request from client , they want password_validator regex for pass validations.
 from django.contrib.auth.hashers import check_password
+from .regex_validator import (
+    password_validator1,
+    password_validator2,
+    password_validator3,
+    password_validator4
+)
 
 from django.core.validators import validate_email
 
@@ -72,7 +78,7 @@ class PostCodeCreateSerializer(serializers.ModelSerializer):
 
 class AccountRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
-        write_only=True, style={'input_type': 'password'})
+        write_only=True, style={'input_type': 'password'}, validators=[password_validator1,password_validator2,password_validator3,password_validator4])
     token = serializers.SerializerMethodField(read_only=True)
     expires = serializers.SerializerMethodField(read_only=True)
     post_info = PostCodeSerializer(source='post_code_id',read_only=True)
@@ -92,15 +98,6 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {'password': {'write_only': True}}
 
-    def validate_password(self, value):
-        try:
-            validators.validate_password(password=value)
-        except exceptions.ValidationError as e:
-            message = e.messages[0]
-            raise serializers.ValidationError(_(message))
-
-        return value
-
     def get_token(self, obj):
         account = obj
         payload = jwt_payload_handler(account)
@@ -118,8 +115,9 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
         data_info = data.get('data')
 
         if account_type == "CMP":
-            company_name = data_info.get('company_name', None)
-            pib = data_info.get('pib', None)
+            if data_info is not None:
+                company_name = data_info.get('company_name', None)
+                pib = data_info.get('pib', None)
 
             if company_name is None:
                 raise serializers.ValidationError(
@@ -134,7 +132,8 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {'company_name': _('This company name already exists.')})
         else:
-            first_name = data_info.get('first_name')
+            if data_info is not None:
+                first_name = data_info.get('first_name')
             if first_name is None:
                 raise serializers.ValidationError(
                     {'first_name': _("Frist name is required.")})

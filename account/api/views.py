@@ -10,6 +10,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import redirect
+from django.conf import settings
 
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -131,8 +132,7 @@ class RegisterAPIView(generics.CreateAPIView):
                 'account': account_obj,
                 'domain': current_site.domain,
                 'uid': urlsafe_base64_encode(force_bytes(account_obj.id)),
-                'token': account_activation_token.make_token(account_obj),
-                'clientUrl': serializer.validated_data.get('redirectUrl')
+                'token': account_activation_token.make_token(account_obj)
             })
 
             to_email = serializer.validated_data.get('email')
@@ -144,7 +144,7 @@ class RegisterAPIView(generics.CreateAPIView):
             return JsonResponse({"message": "Please confirm your email address to complete the registration."}, status=200)
 
 
-def activate(request, uidb64, token, redirectUrl):
+def activate(request, uidb64, token):
     try:
         uid = force_text(urlsafe_base64_decode(uidb64))
         account_obj = Account.objects.get(id=uid)
@@ -154,9 +154,9 @@ def activate(request, uidb64, token, redirectUrl):
         account_obj.is_active = True
         account_obj.save()
 
-        return redirect(redirectUrl)
+        return redirect(settings.CLIENT_URL+'/login/activation/?status=200')
     else:
-        return redirect(redirectUrl)
+        return redirect(settings.CLIENT_URL+'/login/activation/?status=400')
 
 
 class ChangePasswordViaEmailAPIView(generics.CreateAPIView):

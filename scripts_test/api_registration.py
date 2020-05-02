@@ -13,9 +13,9 @@ post_header = {
 }
 
 data = {
-    'email': 'jeca9@gmail.com',
-    'password': '123123',
-    'password2': '123123',
+    'email': 'ijevtic459@gmail.com',
+    'password': 'Akudlola1412',
+    'password2': 'Akudlola1412',
     'address': 'BB',
     'city': 'Pozega',
     'zip_code': "31210",

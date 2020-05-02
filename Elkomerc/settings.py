@@ -27,12 +27,13 @@ SUPER_USER_PASS = os.environ.get('SUPERUSER_PASS')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+CLIENT_URL = 'http://localhost:4200'
 
 ALLOWED_HOSTS = []
 
 #CORS_ORIGIN_ALLOW_ALL = True
 CORS_ORIGIN_WHITELIST = [
-    'http://localhost:4200'
+    CLIENT_URL
 ]
 
 # Application definition

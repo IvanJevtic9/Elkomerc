@@ -14,7 +14,8 @@ class AccountCreateForm(forms.ModelForm):
             'email',
             'profile_image',
             'address',
-            'post_code_id',
+            'zip_code',
+            'city',
             'phone_number'
         ]
 

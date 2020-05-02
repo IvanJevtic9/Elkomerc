@@ -73,8 +73,6 @@ class PostCodeCreateSerializer(serializers.ModelSerializer):
 class AccountRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True, style={'input_type': 'password'})
-    password2 = serializers.CharField(
-        write_only=True, style={'input_type': 'password'})
     token = serializers.SerializerMethodField(read_only=True)
     expires = serializers.SerializerMethodField(read_only=True)
     post_info = PostCodeSerializer(source='post_code_id',read_only=True)
@@ -84,7 +82,6 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
         fields = [
             'email',
             'password',
-            'password2',
             'profile_image',
             'address',
             'post_info',
@@ -104,16 +101,6 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
 
         return value
 
-    def validate_password2(self, value):
-        request = self.context.get('request')
-        pw1 = request.data.get('password')
-        pw2 = value
-
-        if pw1 != pw2:
-            raise serializers.ValidationError(_("Passwords don't match."))
-
-        return value
-
     def get_token(self, obj):
         account = obj
         payload = jwt_payload_handler(account)
@@ -127,12 +114,12 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
     def validate(self, data):
         # Ovde ide validacija vezana za Company ili User
         data = self.context.get('request').data
-        data.pop('password2')
         account_type = data.get('account_type')
+        data_info = data.get('data')
 
         if account_type == "CMP":
-            company_name = data.get('company_name', None)
-            pib = data.get('pib', None)
+            company_name = data_info.get('company_name', None)
+            pib = data_info.get('pib', None)
 
             if company_name is None:
                 raise serializers.ValidationError(
@@ -147,13 +134,14 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {'company_name': _('This company name already exists.')})
         else:
-            first_name = data.get('first_name')
+            first_name = data_info.get('first_name')
             if first_name is None:
                 raise serializers.ValidationError(
                     {'first_name': _("Frist name is required.")})
 
         return data
 
+    """
     def to_representation(self, obj):
         # get the original representation
         ret = super(AccountRegisterSerializer, self).to_representation(obj)
@@ -164,7 +152,7 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
         ret.pop('account_type')
 
         return ret
-
+    """
 class AccountListSerializer(serializers.ModelSerializer):
     company = CompanySerializer(read_only=True, many=True)
     user = UserSerializer(read_only=True, many=True)

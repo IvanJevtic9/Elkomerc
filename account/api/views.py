@@ -9,6 +9,7 @@ from django.contrib.sites.shortcuts import get_current_site
 
 from django.core.mail import EmailMessage
 from django.http import JsonResponse, HttpResponse
+from django.shortcuts import redirect
 
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -97,38 +98,28 @@ class RegisterAPIView(generics.CreateAPIView):
             account_type = serializer.validated_data.get('account_type', None)
             image = serializer.validated_data.get('profile_image', None)
 
-            if city is not None:
-                try:
-                    post_code_obj = PostCode.objects.get(city=city)
-                except PostCode.DoesNotExist:
-                    post_code_obj = None
-            else:
-                try:
-                    post_code_obj = PostCode.objects.get(zip_code=zip_code)
-                except PostCode.DoesNotExist:
-                    post_code_obj = None
-
             account_obj = Account(
-                email=(serializer.validated_data.get('email')), address=address, post_code_id=post_code_obj, phone_number=phone_number, account_type=account_type)
+                email=(serializer.validated_data.get('email')), address=address, city=city, zip_code=zip_code, phone_number=phone_number, account_type=account_type)
             account_obj.set_password(serializer.validated_data.get('password'))
             account_obj.profile_image = image
             account_obj.is_active = False
 
             account_obj.save()
 
+            data = serializer.validated_data.get('data')
             if account_type == "CMP":
-                company_name = serializer.validated_data.get('company_name')
-                pib = serializer.validated_data.get('pib')
-                fax = serializer.validated_data.get('fax')
+                company_name = data.get('company_name')
+                pib = data.get('pib')
+                fax = data.get('fax')
 
                 company_obj = Company(
                     email=account_obj, company_name=company_name, pib=pib, fax=fax)
                 company_obj.save()
 
             else:
-                first_name = serializer.validated_data.get('first_name')
-                last_name = serializer.validated_data.get('last_name')
-                date_of_birth = serializer.validated_data.get('date_of_birth')
+                first_name = data.get('first_name') 
+                last_name = data.get('last_name')
+                date_of_birth = data.get('date_of_birth')
 
                 user_obj = User(email=account_obj, first_name=first_name,
                                 last_name=last_name, date_of_birth=date_of_birth)
@@ -141,6 +132,7 @@ class RegisterAPIView(generics.CreateAPIView):
                 'domain': current_site.domain,
                 'uid': urlsafe_base64_encode(force_bytes(account_obj.id)),
                 'token': account_activation_token.make_token(account_obj),
+                'clientUrl': serializer.validated_data.get('redirectUrl')
             })
 
             to_email = serializer.validated_data.get('email')
@@ -152,7 +144,7 @@ class RegisterAPIView(generics.CreateAPIView):
             return JsonResponse({"message": "Please confirm your email address to complete the registration."}, status=200)
 
 
-def activate(request, uidb64, token):
+def activate(request, uidb64, token, redirectUrl):
     try:
         uid = force_text(urlsafe_base64_decode(uidb64))
         account_obj = Account.objects.get(id=uid)
@@ -161,10 +153,10 @@ def activate(request, uidb64, token):
     if account_obj is not None and account_activation_token.check_token(account_obj, token):
         account_obj.is_active = True
         account_obj.save()
-        # return redirect('home')
-        return JsonResponse({"message": "Thank you for your email confirmation. Now you can login on your account."}, status=200)
+
+        return redirect(redirectUrl)
     else:
-        return JsonResponse({"message": "Activation link is invalid!"}, status=500)
+        return redirect(redirectUrl)
 
 
 class ChangePasswordViaEmailAPIView(generics.CreateAPIView):

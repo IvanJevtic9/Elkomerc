@@ -62,21 +62,21 @@ class CompanyAdmin(admin.ModelAdmin):
 class AccountAdmin(BaseUserAdmin):
     add_form = AccountCreateForm
 
-    list_display = ('id', 'email', 'address', 'post_code_id', 'phone_number', 'account_type', 'is_staff')
+    list_display = ('id', 'email', 'address', 'zip_code', 'city', 'phone_number', 'account_type', 'is_staff')
     list_filter = ('is_active', 'is_staff', 'is_superuser', 'account_type')
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('address', 'post_code_id', 'phone_number', 'profile_image')}),
+        ('Personal info', {'fields': ('address', 'zip_code', 'city', 'phone_number', 'profile_image')}),
         ('Permissions', {'fields': ('is_staff', 'is_superuser', 'is_active')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'password1', 'password2', 'address', 'post_code_id', 'phone_number'),
+            'fields': ('email', 'password1', 'password2', 'address', 'zip_code', 'city', 'phone_number'),
         }),
     )
-    search_fields = ('email','post_code_id__city')
+    search_fields = ('email','city')
     ordering = ('email',)
     filter_horizontal = ()
 

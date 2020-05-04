@@ -15,6 +15,22 @@
             ],
             "django": true,
             "justMyCode": false
-        }
+        },
+        {
+            "name": "Python: Celery",
+            "type": "python",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "program": "D:\\source\\DjangoRepos\\env\\Scripts\\celery.exe",
+            "pythonPath": "D:\\source\\DjangoRepos\\env\\Scripts\\python.exe",
+            "args": [
+                "worker",
+                "--app=Elkomerc",
+                "--loglevel=INFO",
+            ],
+            "env":{
+                "DJANGO_SETTINGS_MODULE": "config.settings.local",
+            }
+        },
     ]
 }

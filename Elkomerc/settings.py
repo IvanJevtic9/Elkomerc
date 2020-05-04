@@ -50,6 +50,10 @@ INSTALLED_APPS = [
     'rest_framework',
     'import_export',
     'rest_framework_swagger',
+
+    #celary
+    'celerybeat_status',
+    'django_celery_beat',
     
     # local apps
     'account',
@@ -206,3 +210,21 @@ JWT_AUTH = {
     'JWT_AUTH_HEADER_PREFIX': 'JWT',
     'JWT_AUTH_COOKIE': None,
 }
+
+# Celery settings
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Europe/Belgrade'
+
+"""
+CELERY_BEAT_SCHEDULE = {
+ 'send-summary-every-day': {
+       'task': 'remove_unactive_accounts',
+       'schedule': 20.0,
+    }      
+}
+"""

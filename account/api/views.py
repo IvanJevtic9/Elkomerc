@@ -23,6 +23,7 @@ from .serializers import AccountRegisterSerializer, AccountListSerializer, Accou
 from account.models import Account, Company, User, PostCode
 
 from .permissions import AnonPermissionOnly, IsOwnerOrReadOnly
+from account.tasks import send_email, remove_unactive_accounts
 
 jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
 jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
@@ -40,19 +41,24 @@ class AuthView(APIView):
         email = data.get('email')
         password = data.get('password')
         account = authenticate(email=email, password=password)
-        
+
         no_email = False
         no_active = False
 
         qs = Account.objects.filter(email__iexact=email)
         if(qs.count() == 0):
-            no_email = True 
+            no_email = True
         else:
             qs = qs.filter(is_active=True)
             if qs.count() == 0:
                 no_active = True
-        
-        if qs.count() == 1:
+
+        if qs.count() is not 1:
+            if no_email:
+                return Response({"message": "EMAIL_NOT_EXSIST"}, status=404)
+            if no_active:
+                return Response({"message": "USER_NOT_ACTIVE"}, status=404)
+        else:
             account_obj = qs.first()
             if account_obj.check_password(password):
                 account = account_obj
@@ -62,13 +68,7 @@ class AuthView(APIView):
 
                 return Response(response)
             else:
-                return Response({"message": "INVALID_PASSWORD"}, status=401)
-        else:
-            if no_email:
-                return Response({"message": "EMAIL_NOT_EXSIST"}, status=404)
-            if no_active:
-                return Response({"message": "USER_NOT_ACTIVE"}, status=404)
-
+                return Response({"message": "INVALID_PASSWORD"}, status=401) 
 
 class RegisterAPIView(generics.CreateAPIView):
     queryset = Account.objects.all()
@@ -126,20 +126,8 @@ class RegisterAPIView(generics.CreateAPIView):
                                 last_name=last_name, date_of_birth=date_of_birth)
                 user_obj.save()
 
-            current_site = get_current_site(request)
-            mail_subject = 'Activate your account.'
-            message = render_to_string('acc_active_email.html', {
-                'account': account_obj,
-                'domain': current_site.domain,
-                'uid': urlsafe_base64_encode(force_bytes(account_obj.id)),
-                'token': account_activation_token.make_token(account_obj)
-            })
-
-            to_email = serializer.validated_data.get('email')
-            email = EmailMessage(
-                mail_subject, message, to=[to_email]
-            )
-            email.send()
+            current_site = get_current_site(request).domain
+            send_email.delay(current_site=current_site,account_id=account_obj.id,to_email=serializer.validated_data.get('email'),template='acc_active_email.html')
 
             return JsonResponse({"message": "Please confirm your email address to complete the registration."}, status=200)
 
@@ -157,7 +145,6 @@ def activate(request, uidb64, token):
         return redirect(settings.CLIENT_URL+'/login/activation/?status=200')
     else:
         return redirect(settings.CLIENT_URL+'/login/activation/?status=400')
-
 
 class ChangePasswordViaEmailAPIView(generics.CreateAPIView):
     serializer_class = AccountResetPasswordSerializer
@@ -177,19 +164,8 @@ class ChangePasswordViaEmailAPIView(generics.CreateAPIView):
             to_email = serializer.validated_data.get('email')
             account_obj = Account.objects.get(email=to_email)
 
-            current_site = get_current_site(request)
-            mail_subject = 'Change password.'
-            message = render_to_string('acc_change_password.html', {
-                'account': account_obj,
-                'domain': current_site.domain,
-                'uid': urlsafe_base64_encode(force_bytes(account_obj.id)),
-                'token': account_change_password_token.make_token(account_obj),
-            })
-
-            email = EmailMessage(
-                mail_subject, message, to=[to_email]
-            )
-            email.send()
+            current_site = get_current_site(request).domain
+            send_email.delay(current_site=current_site,account_id=account_obj.id,to_email=to_email,template='acc_change_password.html')
 
         return JsonResponse({"message": "Please check your email address to reset password."}, status=200)
 
@@ -200,7 +176,6 @@ def reset_password(request, uidb64, token):
     except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
         account_obj = None
     if account_obj is not None and account_change_password_token.check_token(account_obj, token):
-        
         # return redirect('home')
         return JsonResponse({"message": "Reset password"}, status=200)
     else:

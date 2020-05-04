@@ -60,7 +60,11 @@ class User(models.Model):
         verbose_name_plural = "Users"
 
     def __str__(self):
-        return self.first_name + ' ' + self.last_name
+        if self.first_name:
+            fullName = self.first_name
+        if self.last_name:
+            fullName = fullName + ' ' + self.last_name     
+        return fullName
 
 class Company(models.Model):
     email = models.ForeignKey('Account', to_field='email', on_delete=models.CASCADE, related_name='company')

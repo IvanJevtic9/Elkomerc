@@ -11,6 +11,7 @@ from rest_framework.documentation import include_docs_urls
 urlpatterns = [
     path(r'', include_docs_urls(title='Elkomerc API docs')),
     path('admin/', admin.site.urls),
+    path(r'admin/statuscheck/', include('celerybeat_status.urls')),
     path(r'api/', include(('account.api.urls', 'account'), namespace='account')),
     path(r'api/product-category/', include(('product_category.api.urls', 'product-category'), namespace='product-category')),
     path(r'api/product/', include(('product.api.urls', 'product'), namespace='product')),

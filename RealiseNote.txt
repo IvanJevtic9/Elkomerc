@@ -1,0 +1,14 @@
+# Realise note
+
+- Potrebno je najpre uraditi sledece:
+    1. Iz root foldera od server projekta izvrositi sledecu komandu -> pip install -r requirements.txt --no-index --find-links file:///tmp/packages
+    2. Skinuti Redis za Windows (Message queue) U task manager -> service moze se staviti da uvek radi (taj server)
+    # Kao i sto imas jedan power shell gde pokreces python manage.py runserver , tako treba iskucati i naredne komande u novim terminalima:
+    3. celery -A Elkomerc worker -l info -P gevent -> Osluskivac za sve asihrone pozive u aplikaciji - drugi terminal
+    4. celery -A Elkomerc beat -l info - treci terminal -> Osluskivac za schedular taskove (Tipa brisanje neaktivnih accounta) (BUG: Trenutno pokrece taskove ali ih ne izvrsava)
+       celery -A Elkomerc beat -l info -S django
+    -------------------------------------------------------------------------------------------------------------------------------------------------
+    Jos neke izmene: 
+    1. Omogucen dodatni api za slanje aktivacionog linka ... email parametar za poziv - TODO
+    2. Brisanje neaktivacionih accounta 
+    3. Popravljene neke sitne izmene u zahtevima

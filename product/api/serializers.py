@@ -3,27 +3,18 @@ from rest_framework.reverse import reverse as api_reverse
 
 from django.utils.translation import ugettext_lazy as _
 
-from product.models import Attribute, Article, ArticleImage, Producer, ProducerImage, Program
+from product.models import Attribute, Article, ArticleImage, Producer, ProducerImage, ProductGroup
 from product_category.models import Category, SubCategory
-
-class ProgramSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Program
-        fields = [
-            'id',
-            'program_name'
-        ]
 
 class ProducerSerializer(serializers.ModelSerializer):
     producer_images = serializers.SerializerMethodField(read_only=True)
-    programs = ProgramSerializer(source='program',read_only=True,many=True)
     class Meta:
         model = Producer
         fields = [
             'id',
             'producer_name',
+            'link',
             'description',
-            'programs',
             'producer_images'
         ]
 
@@ -46,7 +37,6 @@ class ProducerSerializer(serializers.ModelSerializer):
 
 class ProducerListSerializer(serializers.ModelSerializer):
     producer_images = serializers.SerializerMethodField(read_only=True)
-    programs = ProgramSerializer(source='program',read_only=True,many=True)
     uri = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Producer
@@ -54,7 +44,6 @@ class ProducerListSerializer(serializers.ModelSerializer):
             'id',
             'producer_name',
             'uri',
-            'programs',
             'producer_images'
         ]
 
@@ -76,8 +65,45 @@ class ProducerListSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return api_reverse("product:detail", kwargs={"id": obj.id}, request=request)
 
+class ProducerInfoSerializer(serializers.ModelSerializer):
+    profile_image = serializers.SerializerMethodField(read_only=True)
+    uri = serializers.SerializerMethodField(read_only=True)
+    class Meta:
+        model =  Producer
+        fields = [
+            'id',
+            'producer_name',
+            'uri',
+            'profile_image'
+        ]
+    
+    def get_profile_image(self, obj):
+        profile_image = None
+        list_img = ProducerImage.objects.filter(producer_id=obj.id)
+        host = self.context.get('request')._request._current_scheme_host
+
+        for img in list_img: 
+            if img.purpose == '#profile_icon':
+                profile_image = host + img.image.url
+                break;
+
+        return profile_image
+
+    def get_uri(self, obj):
+        request = self.context.get('request')
+        return api_reverse("product:detail", kwargs={"id": obj.id}, request=request)
+
+class ProductGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductGroup
+        fields = [
+            'id',
+            'group_name'
+        ]
+
 class ArticleSerializer(serializers.ModelSerializer):
-    program_info = serializers.SerializerMethodField(read_only=True)
+    producer_info = ProducerInfoSerializer(source='producer_id',read_only=True)
+    discount_group = ProductGroupSerializer(source='product_group',read_only=True)
     article_images = serializers.SerializerMethodField(read_only=True)
     currency = serializers.SerializerMethodField(read_only=True)
     attributes = serializers.SerializerMethodField(read_only=True)
@@ -88,11 +114,12 @@ class ArticleSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'article_name',
-            'description',
-            'program_info',
+            'producer_info',
             'category',
             'attributes',
             'article_images',
+            'discount_group',
+            'description',
             'unit_of_measure',
             'price',
             'currency',
@@ -140,7 +167,8 @@ class ArticleSerializer(serializers.ModelSerializer):
             obj_att = {
                 "attribute_id": l.id,
                 "attribute_name": l.feature_id.feature_name,
-                "value": l.value
+                "value": l.value,
+                "is_selectable": l.is_selectable
             }     
             attributes.append(obj_att)
 

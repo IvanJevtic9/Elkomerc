@@ -12,3 +12,18 @@
     1. Omogucen dodatni api za slanje aktivacionog linka ... email parametar za poziv - TODO
     2. Brisanje neaktivacionih accounta 
     3. Popravljene neke sitne izmene u zahtevima
+
+
+    #Izmene 4.5.2020:
+    1. Izbrisan program tabela , preko producer_id sad se artikli vezuju sa producer tabelom
+    2. Dodata ProductGroup tabela i preko id vezana Article tabelom
+    3. Dodat takodje na Attributes bool properti is_selectable koji oznacava dal je features za unosenje od strane korisnika
+    4. Promenjeni serializeri , updejtovani admin , json response
+    5. DODATO PRAVILO(koje se ne proverava): 
+         - Kad pozoves api koji vraca listu artikala imace info o produceru
+         - Pod producerom imamo i info o profile_image koji ce da trazi sliku koja je namenja za taj prikaz
+         - Trazice po #profile_icon . Kad budemo dodavali slike za producere , jednu sliku kao purpose oznacavamo pod ovim hashtagom i ona ce oznacavati iconu, koja ce u tom json odgovoru biti prikazan
+    6. Na account dodata valdiacija za post code
+
+    TODO: NEXT REALISE Dodati u Article table article_id char field (Uoceno da neke sifre kod tate su tipa string tako da cemo morati imati jos jednu kolonu ,jer id mora biti AutoIcrement tipa zbog eksela)
+         

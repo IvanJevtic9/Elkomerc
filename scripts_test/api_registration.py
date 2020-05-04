@@ -17,7 +17,7 @@ data = {
     'password': 'Akudlola1412',
     'password2': 'Akudlola1412',
     'address': 'BB',
-    'city': 'Pozega',
+    'city': 'Požega',
     'zip_code': "31210",
     'phone_number': '0642502565',
     'account_type': 'USR',

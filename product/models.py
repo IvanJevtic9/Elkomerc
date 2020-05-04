@@ -31,21 +31,11 @@ class ProducerImage(models.Model):
     def __str__(self):
         return self.image_name
 
-class Program(models.Model):
-    program_name = models.CharField(max_length=30)
-    producer_id = models.ForeignKey('Producer',to_field='id',on_delete=models.CASCADE,related_name='program')
-
-    class Meta:
-        verbose_name = "Program"
-        verbose_name_plural = "Programs"
-
-    def __str__(self):
-        return self.program_name
-
 class Attribute(models.Model):
     article_id = models.ForeignKey('Article',to_field='id',on_delete=models.CASCADE,related_name='attribute_article')
     feature_id = models.ForeignKey('product_category.Feature',to_field='id',on_delete=models.CASCADE,related_name='attribute_feature')
     value = models.TextField(max_length=30)
+    is_selectable = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = "Attribute"
@@ -53,6 +43,16 @@ class Attribute(models.Model):
 
     def __str__(self):
         return self.feature_id.feature_name
+
+class ProductGroup(models.Model):
+    group_name = models.CharField(max_length=50)
+
+    class Meta:
+        verbose_name = "Product group"
+        verbose_name_plural = "Product groups"
+
+    def __str__(self):
+        return self.group_name
 
 class Article(models.Model):
     CURRENCY_TYPE = (
@@ -67,13 +67,15 @@ class Article(models.Model):
 
     article_name = models.CharField(max_length=80)
     sub_category_id = models.ForeignKey('product_category.SubCategory',to_field='id',on_delete=models.CASCADE,related_name='article')
+    producer_id = models.ForeignKey('Producer', to_field='id',on_delete=models.CASCADE,blank=True,null=True,related_name='article_producer')
+    product_group = models.ForeignKey('ProductGroup', to_field='id',on_delete=models.CASCADE,related_name='article_group')
+
     price = models.DecimalField(max_digits=20,decimal_places=2)
     currency = models.CharField(max_length=3,choices=CURRENCY_TYPE,default='RSD')
     unit_of_measure = models.CharField(max_length=1,choices=MEASURE_TYPE,default="P")
     description = models.TextField(max_length=200,blank=True,null=True)
-    program_id = models.ForeignKey('Program', to_field='id',on_delete=models.CASCADE,blank=True,null=True)
     is_available = models.BooleanField(default=True)
-
+    
     class Meta:
         verbose_name = "Article"
         verbose_name_plural = "Articles"

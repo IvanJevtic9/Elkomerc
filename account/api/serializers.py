@@ -79,9 +79,6 @@ class PostCodeCreateSerializer(serializers.ModelSerializer):
 class AccountRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True, style={'input_type': 'password'}, validators=[password_validator1,password_validator2,password_validator3,password_validator4])
-    token = serializers.SerializerMethodField(read_only=True)
-    expires = serializers.SerializerMethodField(read_only=True)
-    post_info = PostCodeSerializer(source='post_code_id',read_only=True)
 
     class Meta:
         model = Account
@@ -90,29 +87,39 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
             'password',
             'profile_image',
             'address',
-            'post_info',
+            'city',
+            'zip_code',
             'phone_number',
             'account_type',
-            'token',
-            'expires'
         ]
         extra_kwargs = {'password': {'write_only': True}}
-
-    def get_token(self, obj):
-        account = obj
-        payload = jwt_payload_handler(account)
-        token = jwt_encode_handler(payload)
-
-        return token
-
-    def get_expires(self, obj):
-        return datetime.datetime.now() + expire_delta
 
     def validate(self, data):
         # Ovde ide validacija vezana za Company ili User
         data = self.context.get('request').data
         account_type = data.get('account_type')
         data_info = data.get('data')
+
+        city = data.get('city')
+        zip_code = data.get('zip_code')
+
+        if city is not None:
+            try:
+                post_obj = PostCode.objects.get(city=city)
+                if post_obj.zip_code != zip_code:
+                    raise serializers.ValidationError(
+                    {'zip_code': _("Provided zip code is invalid.")})
+            except PostCode.DoesNotExist:
+                pass
+        
+        if zip_code is not None:
+            try:
+                post_obj = PostCode.objects.get(zip_code=zip_code)
+                if post_obj.city != city:
+                    raise serializers.ValidationError(
+                    {'city': _("Provided city is invalid.")})
+            except PostCode.DoesNotExist:
+                pass
 
         if account_type == "CMP":
             if data_info is not None:
@@ -157,7 +164,6 @@ class AccountListSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True, many=True)
     is_active = serializers.BooleanField(read_only=True)
     uri = serializers.SerializerMethodField(read_only=True)
-    post_info = PostCodeSerializer(source='post_code_id',read_only=True)
     class Meta:
         model = Account
         fields = [
@@ -165,7 +171,8 @@ class AccountListSerializer(serializers.ModelSerializer):
             'email',
             'profile_image',
             'uri',
-            'post_info',
+            'city',
+            'zip_code',
             'address',
             'phone_number',
             'account_type',
@@ -183,7 +190,6 @@ class AccountDetailSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True, many=True)
     email = serializers.EmailField(read_only=True)
     is_active = serializers.BooleanField(read_only=True)
-    post_info = PostCodeSerializer(source='post_code_id',read_only=True)
     class Meta:
         model = Account
         fields = [
@@ -191,7 +197,8 @@ class AccountDetailSerializer(serializers.ModelSerializer):
             'email',
             'profile_image',
             'address',
-            'post_info',
+            'city',
+            'zip_code',
             'phone_number',
             'account_type',
             'company',
@@ -204,6 +211,27 @@ class AccountDetailSerializer(serializers.ModelSerializer):
         data = self.context.get('request').data
         account_type = data.get('account_type')
         email = data.get('email')
+
+        city = data.get('city')
+        zip_code = data.get('zip_code')
+
+        if city is not None:
+            try:
+                post_obj = PostCode.objects.get(city=city)
+                if post_obj.zip_code != zip_code:
+                    raise serializers.ValidationError(
+                    {'zip_code': _("Provided zip code is invalid.")})
+            except PostCode.DoesNotExist:
+                pass
+        
+        if zip_code is not None:
+            try:
+                post_obj = PostCode.objects.get(zip_code=zip_code)
+                if post_obj.city != city:
+                    raise serializers.ValidationError(
+                    {'city': _("Provided city is invalid.")})
+            except PostCode.DoesNotExist:
+                pass
 
         if account_type == "CMP":
             company_name = data.get('company_name', None)
@@ -231,7 +259,7 @@ class AccountDetailSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         data = self.context.get('request').data
-        email = email = data.get('email')
+        email = data.get('email')
         account_obj = Account.objects.get(email=email)
 
         return account_obj

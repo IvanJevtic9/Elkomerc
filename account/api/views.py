@@ -256,10 +256,6 @@ class AccountDetailApiView(
             account_type = serializer.validated_data.get('account_type')
             image = serializer.validated_data.get('profile_image', None)
 
-            if city is not None:
-                post_code_obj = PostCode.objects.get(city=city)
-            else:
-                post_code_obj = PostCode.objects.get(zip_code=zip_code)
             # user info - if exist
             first_name = serializer.validated_data.get('first_name')
             last_name = serializer.validated_data.get('last_name')
@@ -295,7 +291,8 @@ class AccountDetailApiView(
                     company_obj.save()
 
             account.address = address
-            account.post_code_id = post_code_obj
+            account.city = city
+            account.zip_code = zip_code
             account.phone_number = phone_number
             account.account_type = account_type
             if account.profile_image is None:

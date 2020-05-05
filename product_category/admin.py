@@ -44,20 +44,20 @@ class SubCategoryAdmin(ImportExportModelAdmin):
 class FeatureAdmin(ImportExportModelAdmin):
     form = FeatureForm
     list_display = ('id', 'feature_name', 'data_type')
-    list_filter = ('data_type',)
+    list_filter = ('data_type', 'is_selectable',)
 
     fieldsets = (
-        ("General info", {'fields': ('feature_name', 'data_type',)}),
+        ("General info", {'fields': ('feature_name', 'data_type', 'is_selectable')}),
     )
 
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('id', 'feature_name', 'data_type'),
+            'fields': ('id', 'feature_name', 'data_type', 'is_selectable',),
         }),
     )
-    search_fields = ('id', 'feature_name', 'data_type',)
-    ordering = ('id', 'feature_name', 'data_type',)
+    search_fields = ('id', 'feature_name', 'data_type',  'is_selectable',)
+    ordering = ('id', 'feature_name', 'data_type',  'is_selectable',)
 
 class FloorFeatureAdmin(ImportExportModelAdmin):
     form = FloorFeatureForm

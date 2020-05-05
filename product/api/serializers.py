@@ -103,7 +103,7 @@ class ProductGroupSerializer(serializers.ModelSerializer):
 
 class ArticleSerializer(serializers.ModelSerializer):
     producer_info = ProducerInfoSerializer(source='producer_id',read_only=True)
-    discount_group = ProductGroupSerializer(source='product_group',read_only=True)
+    discount_group = ProductGroupSerializer(source='product_group_id',read_only=True)
     article_images = serializers.SerializerMethodField(read_only=True)
     currency = serializers.SerializerMethodField(read_only=True)
     attributes = serializers.SerializerMethodField(read_only=True)
@@ -168,7 +168,7 @@ class ArticleSerializer(serializers.ModelSerializer):
                 "attribute_id": l.id,
                 "attribute_name": l.feature_id.feature_name,
                 "value": l.value,
-                "is_selectable": l.is_selectable
+                "is_selectable": l.feature_id.is_selectable
             }     
             attributes.append(obj_att)
 

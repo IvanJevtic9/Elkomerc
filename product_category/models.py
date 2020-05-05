@@ -32,7 +32,8 @@ class Feature(models.Model):
     )
     data_type = models.CharField(max_length=3,choices=DATA_TYPE,default='STR')
     feature_name = models.CharField(max_length=20,unique=True)
-
+    is_selectable = models.BooleanField(default=False)
+    
     class Model:
         verbose_name = "Feature"
         verbose_name_plural = "Features"

@@ -10,7 +10,7 @@ from tablib import Dataset
 import pandas as pa
 
 from .serializers import ArticleSerializer, ProducerSerializer, ProducerListSerializer , ArticleImportSerializer
-from product.models import Article, Producer
+from product.models import Article, Producer, Attribute
 from product.resources import ArticleResource
 
 from account.api.permissions import AdminAuthenticationPermission
@@ -24,9 +24,10 @@ class ArticleListApiView(generics.ListAPIView):
 
         category_id_query = dict(self.request.GET.lists()).get('category_id',None)
         sub_category_id_query = dict(self.request.GET.lists()).get('sub_category_id',None)
+        value_query = dict(self.request.GET.lists()).get('value',None)
         category_name = self.request.GET.get('category_name',None)
         sub_category_name = self.request.GET.get('sub_category_name',None)
-
+        
         if category_id_query:
             queryset_list = queryset_list.filter(
                 Q(sub_category_id__category_id__in=category_id_query)                
@@ -42,7 +43,21 @@ class ArticleListApiView(generics.ListAPIView):
         if sub_category_name:
             queryset_list = queryset_list.filter(
                 Q(sub_category_id__sub_category_name__iexact=sub_category_name)                
-            ).distinct()            
+            ).distinct()
+
+        attr_queryset = Attribute.objects.all()
+        if value_query:
+            attr_queryset = attr_queryset.filter(
+                Q(value__in=value_query)                
+            ).distinct()                 
+
+            articles_id = []
+            for val in attr_queryset:
+                articles_id.append(val.id)
+
+            queryset_list = queryset_list.filter(
+                Q(id__in=articles_id)                
+            ).distinct()
 
         return queryset_list
 

@@ -57,8 +57,7 @@ class AttributeForm(forms.ModelForm):
             'id',
             'article_id',
             'feature_id',
-            'value',
-            'is_selectable'
+            'value'
         ]
 
 class ProductGroupForm(forms.ModelForm):
@@ -77,7 +76,7 @@ class ArticleForm(forms.ModelForm):
             'article_name',
             'sub_category_id',
             'producer_id',
-            'product_group',
+            'product_group_id',
             'description',
             'price',
             'unit_of_measure',

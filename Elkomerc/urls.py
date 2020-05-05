@@ -13,6 +13,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path(r'admin/statuscheck/', include('celerybeat_status.urls')),
     path(r'api/', include(('account.api.urls', 'account'), namespace='account')),
-    path(r'api/product-category/', include(('product_category.api.urls', 'product-category'), namespace='product-category')),
+    path(r'api/product-category/', include(('product_category.api.urls', 'category'), namespace='category')),
     path(r'api/product/', include(('product.api.urls', 'product'), namespace='product')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

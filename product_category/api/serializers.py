@@ -4,32 +4,17 @@ from rest_framework.reverse import reverse as api_reverse
 from django.utils.translation import ugettext_lazy as _
 
 from product_category.models import Category, SubCategory, Feature, FloorFeature
-
-class FeatureSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Feature
-        fields = [
-            'id',
-            'data_type',
-            'feature_name'
-        ]
+from product.models import Attribute
 
 class SubCategorySerializer(serializers.ModelSerializer):
     features = serializers.SerializerMethodField(read_only=True)
-    category_name = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = SubCategory
         fields = [
             'id',
-            'category_name',
             'sub_category_name',
             'features'
         ]
-
-    def get_category_name(self, obj):
-        category = Category.objects.get(id=obj.category_id_id)
-
-        return category.category_name
 
     def get_features(self, obj):
         features = []
@@ -37,46 +22,41 @@ class SubCategorySerializer(serializers.ModelSerializer):
 
         qs_list = FloorFeature.objects.filter(sub_category_id=id)
         for q in qs_list:
-
-            object = {
+            feat_obj = {
                 "id": q.feature_id.id,
                 "feature_name": q.feature_id.feature_name,
-                "data_type": q.feature_id.data_type
+                "data_type": q.feature_id.data_type,
+                "attributes": [],
+                "is_selectable": q.feature_id.is_selectable
             }
 
-            features.append(object)
+            att_list = Attribute.objects.filter(feature_id=q.feature_id.id)
+            for att in att_list:
+                att_obj = {
+                    'id': att.id,
+                    'value': att.value
+                }
+                feat_obj.get('attributes').append(att_obj)
+
+            features.append(feat_obj)
 
         return features
 
 
 class SubCategoryPublicSerializer(serializers.ModelSerializer):
-    features = serializers.SerializerMethodField(read_only=True)
+    uri = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = SubCategory
         fields = [
             'id',
             'category_id',
             'sub_category_name',
-            'features'
+            'uri'
         ]
 
-    def get_features(self, obj):
-        features = []
-        id = obj.id
-
-        qs_list = FloorFeature.objects.filter(sub_category_id=id)
-        for q in qs_list:
-
-            object = {
-                "id": q.feature_id.id,
-                "feature_name": q.feature_id.feature_name,
-                "data_type": q.feature_id.data_type
-            }
-
-            features.append(object)
-
-        return features
-
+    def get_uri(self, obj):
+        request = self.context.get('request')
+        return api_reverse("category:detail", kwargs={"id": obj.id}, request=request)
 
 class CategorySerializer(serializers.ModelSerializer):
     sub_categories = SubCategoryPublicSerializer(source='sub_category',read_only=True,many=True)

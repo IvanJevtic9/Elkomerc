@@ -53,34 +53,33 @@ class ProducerImageAdmin(ImportExportModelAdmin):
 class AttributeAdmin(ImportExportModelAdmin):
     form = AttributeForm
     list_display = ('id', 'article_id', 'feature_id', 'value')
-    list_filter = ('is_selectable',)
     fieldsets = (
-        ("General info", {'fields': ('article_id', 'feature_id', 'value', 'is_selectable')}),
+        ("General info", {'fields': ('article_id', 'feature_id', 'value',)}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('article_id', 'feature_id', 'value', 'is_selectable'),
+            'fields': ('article_id', 'feature_id', 'value',),
         }),
     )
-    search_fields = ('id', 'article_id', 'feature_id', 'value', 'is_selectable',)
-    ordering = ('id', 'article_id', 'feature_id', 'value', 'is_selectable',) 
+    search_fields = ('id', 'article_id', 'feature_id', 'value',)
+    ordering = ('id', 'article_id', 'feature_id', 'value',) 
 
 class ArticleAdmin(ImportExportModelAdmin):
     form = ArticleForm
-    list_display = ('id', 'article_name', 'sub_category_id', 'producer_id', 'product_group', 'description', 'price', 'unit_of_measure', 'currency', 'is_available')
+    list_display = ('id', 'article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available')
     list_filter = ('is_available',)
     fieldsets = (
-        ("General info", {'fields': ('article_name', 'sub_category_id', 'producer_id', 'product_group', 'description', 'price', 'unit_of_measure', 'currency', 'is_available')}),
+        ("General info", {'fields': ('article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('article_name', 'sub_category_id', 'producer_id', 'product_group', 'description', 'price', 'unit_of_measure', 'currency', 'is_available'),
+            'fields': ('article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available'),
         }),
     )
-    search_fields = ('id', 'article_name', 'sub_category_id', 'producer_id', 'product_group', 'description', 'price', 'unit_of_measure', 'currency', 'is_available',)
-    ordering = ('id', 'article_name', 'sub_category_id', 'producer_id', 'product_group', 'description', 'price', 'unit_of_measure', 'currency', 'is_available',) 
+    search_fields = ('id', 'article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available',)
+    ordering = ('id', 'article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available',) 
 
 class ArticleImageAdmin(ImportExportModelAdmin):
     form = ArticleImageForm

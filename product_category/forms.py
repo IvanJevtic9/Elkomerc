@@ -26,7 +26,8 @@ class FeatureForm(forms.ModelForm):
         fields = [
             'id',
             'feature_name',
-            'data_type'
+            'data_type',
+            'is_selectable'
         ]
 
 class FloorFeatureForm(forms.ModelForm):

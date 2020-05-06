@@ -25,5 +25,7 @@
          - Trazice po #profile_icon . Kad budemo dodavali slike za producere , jednu sliku kao purpose oznacavamo pod ovim hashtagom i ona ce oznacavati iconu, koja ce u tom json odgovoru biti prikazan
     6. Na account dodata valdiacija za post code
 
-    TODO: NEXT REALISE Dodati u Article table article_id char field (Uoceno da neke sifre kod tate su tipa string tako da cemo morati imati jos jednu kolonu ,jer id mora biti AutoIcrement tipa zbog eksela)
-         
+
+    #Izmene 6.5.2020
+    1. Dodat article_code u Article tabeli 
+    2. Napravljen api za detail article , i smanjen api za lista article     

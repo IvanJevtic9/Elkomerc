@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from tablib import Dataset
 import pandas as pa
 
-from .serializers import ArticleSerializer, ProducerSerializer, ProducerListSerializer , ArticleImportSerializer
+from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer , ArticleImportSerializer
 from product.models import Article, Producer, Attribute
 from product.resources import ArticleResource
 
@@ -17,7 +17,7 @@ from account.api.permissions import AdminAuthenticationPermission
 
 class ArticleListApiView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    serializer_class = ArticleSerializer
+    serializer_class = ArticleListSerializer
 
     def get_queryset(self, *args, **kwargs):
         queryset_list = Article.objects.all()
@@ -91,6 +91,14 @@ class ArticleImportApiView(generics.CreateAPIView):
                     pass
 
             return JsonResponse({"message": "File has been imported successfully."}, status=200)
+
+class ArticleDetailApiView(generics.RetrieveAPIView): 
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    serializer_class = ArticleDetailSerializer
+    lookup_field = 'id'
+
+    def get_queryset(self, *args, **kwargs):
+        return Article.objects.all()
 
 class ProducerDetailApiView(generics.RetrieveAPIView): 
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]

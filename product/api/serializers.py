@@ -101,7 +101,39 @@ class ProductGroupSerializer(serializers.ModelSerializer):
             'group_name'
         ]
 
-class ArticleSerializer(serializers.ModelSerializer):
+class ArticleListSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.SerializerMethodField(read_only=True)
+    uri = serializers.SerializerMethodField(read_only=True)
+    class Meta:
+        model = Article
+        fields = [
+            'id',
+            'article_code',
+            'article_name',
+            'uri',
+            'profile_picture',
+            'price'
+        ]
+
+    def get_profile_picture(self, obj):
+        profile_image = None
+        list_img = ArticleImage.objects.filter(article_id=obj.id)
+        host = self.context.get('request')._request._current_scheme_host
+
+        for img in list_img:
+            if profile_image is  None:
+                profile_image = host + img.image.url
+            if img.purpose == '#profile_image':
+                profile_image = host + img.image.url
+                break;
+
+        return profile_image
+
+    def get_uri(self, obj):
+        request = self.context.get('request')
+        return api_reverse("product:article", kwargs={"id": obj.id}, request=request)
+
+class ArticleDetailSerializer(serializers.ModelSerializer):
     producer_info = ProducerInfoSerializer(source='producer_id',read_only=True)
     discount_group = ProductGroupSerializer(source='product_group_id',read_only=True)
     article_images = serializers.SerializerMethodField(read_only=True)

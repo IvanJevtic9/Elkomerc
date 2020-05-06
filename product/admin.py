@@ -67,19 +67,19 @@ class AttributeAdmin(ImportExportModelAdmin):
 
 class ArticleAdmin(ImportExportModelAdmin):
     form = ArticleForm
-    list_display = ('id', 'article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available')
+    list_display = ('id', 'article_code', 'article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available')
     list_filter = ('is_available',)
     fieldsets = (
-        ("General info", {'fields': ('article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available')}),
+        ("General info", {'fields': ('article_code', 'article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available'),
+            'fields': ('article_code', 'article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available'),
         }),
     )
-    search_fields = ('id', 'article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available',)
-    ordering = ('id', 'article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available',) 
+    search_fields = ('id', 'article_code', 'article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available',)
+    ordering = ('id', 'article_code', 'article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available',) 
 
 class ArticleImageAdmin(ImportExportModelAdmin):
     form = ArticleImageForm

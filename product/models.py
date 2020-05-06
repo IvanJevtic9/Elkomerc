@@ -64,6 +64,7 @@ class Article(models.Model):
         ("P","Piece")
     )
 
+    article_code = models.CharField(max_length=15,unique=True)
     article_name = models.CharField(max_length=80)
     sub_category_id = models.ForeignKey('product_category.SubCategory',to_field='id',on_delete=models.CASCADE,related_name='article')
     producer_id = models.ForeignKey('Producer', to_field='id',on_delete=models.CASCADE,blank=True,null=True,related_name='article_producer')

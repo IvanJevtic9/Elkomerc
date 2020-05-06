@@ -113,6 +113,7 @@ class ArticleSerializer(serializers.ModelSerializer):
         model = Article
         fields = [
             'id',
+            'article_code',
             'article_name',
             'producer_info',
             'category',
@@ -196,5 +197,4 @@ class ArticleImportSerializer(serializers.ModelSerializer):
         ]
 
     def validate_file_import(self, value):
-
         return value            

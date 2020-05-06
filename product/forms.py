@@ -73,6 +73,7 @@ class ArticleForm(forms.ModelForm):
         model = Article
         fields = [
             'id',
+            'article_code',
             'article_name',
             'sub_category_id',
             'producer_id',

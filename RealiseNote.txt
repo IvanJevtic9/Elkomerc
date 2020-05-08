@@ -29,3 +29,7 @@
     #Izmene 6.5.2020
     1. Dodat article_code u Article tabeli 
     2. Napravljen api za detail article , i smanjen api za lista article     
+
+    #Izmene 8.5.2020
+    1. Dodata pretraga po porducer id-u ?producer=id nacin koriscenja (http://localhost:8000/api/product/articles/) article list api
+    2. Popravljen producer , vraca jednu sliku , producer_icon , kao i listu sub_categories_id  exmpl [ 1, 2, 3] (http://localhost:8000/api/product/producers/)

@@ -36,30 +36,39 @@ class ProducerSerializer(serializers.ModelSerializer):
         return producer_images
 
 class ProducerListSerializer(serializers.ModelSerializer):
-    producer_images = serializers.SerializerMethodField(read_only=True)
+    producer_icon = serializers.SerializerMethodField(read_only=True)
     uri = serializers.SerializerMethodField(read_only=True)
+    sub_categories_id = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Producer
         fields = [
             'id',
             'producer_name',
             'uri',
-            'producer_images'
+            'producer_icon',
+            'sub_categories_id'
         ]
 
-    def get_producer_images(self, obj):
-        producer_images = []
+    def get_producer_icon(self, obj):
+        producer_icon = None
         list_img = ProducerImage.objects.filter(producer_id=obj.id)
         host = self.context.get('request')._request._current_scheme_host
 
-        for img in list_img:
-            obj_img = {
-                "uri": host+img.image.url,
-                "purpose": img.purpose
-            }
-            producer_images.append(obj_img)
+        for img in list_img: 
+            if img.purpose == '#profile_icon':
+                producer_icon = host + img.image.url
+                break;
 
-        return producer_images
+        return producer_icon
+
+    def get_sub_categories_id(self, obj):
+        sub_categories = []
+        artical_list = Article.objects.filter(producer_id=obj.id)
+
+        for art in artical_list:
+            sub_categories.append(art.sub_category_id.id)
+        
+        return set(sub_categories)
 
     def get_uri(self, obj):
         request = self.context.get('request')

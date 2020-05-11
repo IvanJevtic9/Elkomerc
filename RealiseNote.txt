@@ -33,3 +33,20 @@
     #Izmene 8.5.2020
     1. Dodata pretraga po porducer id-u ?producer=id nacin koriscenja (http://localhost:8000/api/product/articles/) article list api
     2. Popravljen producer , vraca jednu sliku , producer_icon , kao i listu sub_categories_id  exmpl [ 1, 2, 3] (http://localhost:8000/api/product/producers/)
+
+
+    #D:\source\DjangoRepos\Elkomerc docs\article_images 
+
+   #TODO list
+   1. Srediti Producer-e , izbrisati tabelu ProducerImages . Svaki producer ce imati samo jednu sliku ... 
+   2. Pronaci sve logoe za firmu i ubaciti 
+   3. Treba napraviti tabele za:
+      - listwish detail, list (dodavanje , brisanje) ...
+      - like  detail, list (dodavanje , brisanje ) ...
+      - rabati samo izlistavanje ...
+      - paymentOrder dodavanje , izlistivanje , brisanje , izmena ...
+   4. Treba popuniti tabele
+   5. Email notifikacija kad stigne porudzbina , promena statusa porudzbine , izmena porudzbine 
+   6. Podrska za admin funkcionalnosti   
+   -. Django template za slanje mejla (potvrda registracije)
+   -. Refresh token

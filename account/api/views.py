@@ -64,7 +64,7 @@ class AuthView(APIView):
                 account = account_obj
                 payload = jwt_payload_handler(account)
                 token = jwt_encode_handler(payload)
-                response = jwt_response_payload_handler(token, email)
+                response = jwt_response_payload_handler(token, email, account.id)
 
                 return Response(response)
             else:

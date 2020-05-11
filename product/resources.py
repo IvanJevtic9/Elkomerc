@@ -1,6 +1,9 @@
 from import_export import resources
-from .models import Article
+from .models import ArticleImage
 
-class ArticleResource(resources.ModelResource):
+class ArticleImageResource(resources.ModelResource):
     class Meta:
-        model = Article
+        model = ArticleImage
+
+    def import_data(self, dataset, dry_run=False, raise_errors=False, use_transactions=None, collect_failed_rows=True, **kwargs):
+        print(dataset)

@@ -6,6 +6,9 @@ from django.utils.translation import ugettext_lazy as _
 from product.models import Attribute, Article, ArticleImage, Producer, ProducerImage, ProductGroup
 from product_category.models import Category, SubCategory
 
+import mercantile
+import os
+
 class ProducerSerializer(serializers.ModelSerializer):
     producer_images = serializers.SerializerMethodField(read_only=True)
     class Meta:
@@ -238,4 +241,17 @@ class ArticleImportSerializer(serializers.ModelSerializer):
         ]
 
     def validate_file_import(self, value):
-        return value            
+        return value
+
+class ArticleImagesImportSerializer(serializers.ModelSerializer):
+    directory_path = serializers.CharField(max_length=500,required=True)
+    exel_file = serializers.FileField(required=True)
+    class Meta:
+        model = ArticleImage
+        fields = [
+            'exel_file',
+            'directory_path'
+        ]
+
+    def validate_exel_file(self,value):
+        return value     

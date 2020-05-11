@@ -35,7 +35,7 @@ class ProducerAdmin(ImportExportModelAdmin):
     search_fields = ('id', 'producer_name', 'link', 'description',)
     ordering = ('id', 'producer_name', 'link', 'description',)
 
-class ProducerImageAdmin(ImportExportModelAdmin):
+class ProducerImageAdmin(admin.ModelAdmin):
     form = ProducerImageForm
     list_display = ('id', 'producer_id', 'image', 'image_name', 'purpose', 'content_type', 'size', 'height', 'width')
     fieldsets = (
@@ -81,7 +81,7 @@ class ArticleAdmin(ImportExportModelAdmin):
     search_fields = ('id', 'article_code', 'article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available',)
     ordering = ('id', 'article_code', 'article_name', 'sub_category_id', 'producer_id', 'product_group_id', 'description', 'price', 'unit_of_measure', 'currency', 'is_available',) 
 
-class ArticleImageAdmin(ImportExportModelAdmin):
+class ArticleImageAdmin(admin.ModelAdmin):
     form = ArticleImageForm
     list_display = ('id', 'article_id', 'image', 'image_name', 'purpose', 'content_type', 'size', 'height', 'width')
     fieldsets = (

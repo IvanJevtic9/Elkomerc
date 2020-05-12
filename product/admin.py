@@ -3,14 +3,12 @@ from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin
 
 from .models import (Producer,
-                     ProducerImage,
                      ProductGroup,
                      Attribute,
                      Article,
                      ArticleImage)
 
 from .forms import (ProducerForm,
-                    ProducerImageForm,
                     ProductGroupForm,
                     AttributeForm,
                     ArticleForm,
@@ -22,33 +20,18 @@ from .forms import (ProducerForm,
 
 class ProducerAdmin(ImportExportModelAdmin):
     form = ProducerForm
-    list_display = ('id', 'producer_name', 'link', 'description')
+    list_display = ('id', 'producer_name', 'link', 'profile_image', 'description')
     fieldsets = (
-        ("General info", {'fields': ('producer_name', 'link', 'description')}),
+        ("General info", {'fields': ('producer_name', 'link', 'profile_image', 'description')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('producer_name', 'link', 'description'),
+            'fields': ('producer_name', 'link', 'profile_image', 'description'),
         }),
     )
-    search_fields = ('id', 'producer_name', 'link', 'description',)
-    ordering = ('id', 'producer_name', 'link', 'description',)
-
-class ProducerImageAdmin(admin.ModelAdmin):
-    form = ProducerImageForm
-    list_display = ('id', 'producer_id', 'image', 'image_name', 'purpose', 'content_type', 'size', 'height', 'width')
-    fieldsets = (
-        ("General info", {'fields': ('producer_id', 'image', 'image_name', 'purpose')}),
-    )
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('producer_id', 'image', 'image_name', 'purpose',),
-        }),
-    )
-    search_fields = ('id', 'producer_id', 'image', 'image_name', 'purpose', 'content_type', 'size', 'height', 'width',)
-    ordering = ('id', 'producer_id', 'image', 'image_name', 'purpose', 'content_type', 'size', 'height', 'width',)
+    search_fields = ('id', 'producer_name', 'link', 'profile_image', 'description',)
+    ordering = ('id', 'producer_name', 'link', 'profile_image', 'description',)
 
 class AttributeAdmin(ImportExportModelAdmin):
     form = AttributeForm
@@ -113,7 +96,6 @@ class ProductGroupFormAdmin(ImportExportModelAdmin):
 
 
 admin.site.register(Producer, ProducerAdmin)
-admin.site.register(ProducerImage, ProducerImageAdmin)
 admin.site.register(ProductGroup, ProductGroupFormAdmin)
 admin.site.register(Attribute, AttributeAdmin)
 admin.site.register(Article, ArticleAdmin)

@@ -3,43 +3,24 @@ from rest_framework.reverse import reverse as api_reverse
 
 from django.utils.translation import ugettext_lazy as _
 
-from product.models import Attribute, Article, ArticleImage, Producer, ProducerImage, ProductGroup
+from product.models import Attribute, Article, ArticleImage, Producer, ProductGroup
 from product_category.models import Category, SubCategory
 
 import mercantile
 import os
 
 class ProducerSerializer(serializers.ModelSerializer):
-    producer_images = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Producer
         fields = [
             'id',
             'producer_name',
             'link',
-            'description',
-            'producer_images'
+            'profile_image',
+            'description'
         ]
 
-    def get_producer_images(self, obj):
-        producer_images = []
-        list_img = ProducerImage.objects.filter(producer_id=obj.id)
-        host = self.context.get('request')._request._current_scheme_host
-
-        for img in list_img:
-            obj_img = {
-                "uri": host+img.image.url,
-                "purpose": img.purpose,
-                "content_type": img.content_type,
-                "height": img.height,
-                "width": img.width
-            }
-            producer_images.append(obj_img)
-
-        return producer_images
-
 class ProducerListSerializer(serializers.ModelSerializer):
-    producer_icon = serializers.SerializerMethodField(read_only=True)
     uri = serializers.SerializerMethodField(read_only=True)
     sub_categories_id = serializers.SerializerMethodField(read_only=True)
     class Meta:
@@ -48,21 +29,9 @@ class ProducerListSerializer(serializers.ModelSerializer):
             'id',
             'producer_name',
             'uri',
-            'producer_icon',
+            'profile_image',
             'sub_categories_id'
         ]
-
-    def get_producer_icon(self, obj):
-        producer_icon = None
-        list_img = ProducerImage.objects.filter(producer_id=obj.id)
-        host = self.context.get('request')._request._current_scheme_host
-
-        for img in list_img: 
-            if img.purpose == '#profile_icon':
-                producer_icon = host + img.image.url
-                break;
-
-        return producer_icon
 
     def get_sub_categories_id(self, obj):
         sub_categories = []
@@ -78,7 +47,6 @@ class ProducerListSerializer(serializers.ModelSerializer):
         return api_reverse("product:detail", kwargs={"id": obj.id}, request=request)
 
 class ProducerInfoSerializer(serializers.ModelSerializer):
-    profile_image = serializers.SerializerMethodField(read_only=True)
     uri = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model =  Producer
@@ -88,18 +56,6 @@ class ProducerInfoSerializer(serializers.ModelSerializer):
             'uri',
             'profile_image'
         ]
-    
-    def get_profile_image(self, obj):
-        profile_image = None
-        list_img = ProducerImage.objects.filter(producer_id=obj.id)
-        host = self.context.get('request')._request._current_scheme_host
-
-        for img in list_img: 
-            if img.purpose == '#profile_icon':
-                profile_image = host + img.image.url
-                break;
-
-        return profile_image
 
     def get_uri(self, obj):
         request = self.context.get('request')
@@ -254,4 +210,17 @@ class ArticleImagesImportSerializer(serializers.ModelSerializer):
         ]
 
     def validate_exel_file(self,value):
-        return value     
+        return value
+
+class ProducerImagesImportSerializer(serializers.ModelSerializer):
+    directory_path = serializers.CharField(max_length=500,required=True)
+    exel_file = serializers.FileField(required=True)
+    class Meta:
+        model = Producer
+        fields = [
+            'exel_file',
+            'directory_path'
+        ]
+
+    def validate_exel_file(self,value):
+        return value

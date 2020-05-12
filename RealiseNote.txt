@@ -38,8 +38,8 @@
     #D:\source\DjangoRepos\Elkomerc docs\article_images 
 
    #TODO list
-   1. Srediti Producer-e , izbrisati tabelu ProducerImages . Svaki producer ce imati samo jednu sliku ... 
-   2. Pronaci sve logoe za firmu i ubaciti 
+   1. Srediti Producer-e , izbrisati tabelu ProducerImages . Svaki producer ce imati samo jednu sliku ...  DONE
+   2. Pronaci sve logoe za firmu i ubaciti DONE
    3. Treba napraviti tabele za:
       - listwish detail, list (dodavanje , brisanje) ...
       - like  detail, list (dodavanje , brisanje ) ...
@@ -50,3 +50,13 @@
    6. Podrska za admin funkcionalnosti   
    -. Django template za slanje mejla (potvrda registracije)
    -. Refresh token
+
+
+* (2.) Videti sa tatom
+   Logo problems 
+   -primera (verovatno neka podvrsta nopalluxa)
+   -xled nema lep logo nigde
+   -exp sta je to ??
+   -Hp , dal mi to uopste prodajemo ??
+   -ACK nema lep logo
+   (fali 5 logoa) - ako nemamo robu na lageru za tog proizvodjaca neprekazivati logo

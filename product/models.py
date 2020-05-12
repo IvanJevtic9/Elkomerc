@@ -5,6 +5,7 @@ from django.db import models
 class Producer(models.Model):
     producer_name = models.CharField(max_length=30,unique=True)
     link = models.TextField(max_length=50,blank=True,null=True)
+    profile_image = models.ImageField(upload_to='producer_img/',blank=True,null=True)
     description = models.TextField(max_length=100,blank=True,null=True)
 
     class Meta:
@@ -13,23 +14,6 @@ class Producer(models.Model):
 
     def __str__(self):
         return self.producer_name
-
-class ProducerImage(models.Model):
-    producer_id = models.ForeignKey('Producer',to_field='id',on_delete=models.CASCADE,related_name='producer_image')
-    image = models.ImageField(upload_to='producer_img/')
-    image_name = models.CharField(max_length=30,blank=True,null=True)
-    content_type = models.CharField(max_length=20,blank=True,null=True)
-    size = models.IntegerField(blank=True,null=True)
-    height = models.IntegerField(blank=True,null=True)
-    width = models.IntegerField(blank=True,null=True)
-    purpose = models.CharField(max_length=20,blank=True,null=True)
-
-    class Meta:
-        verbose_name = "Producer image"
-        verbose_name_plural = "Producer images"
-
-    def __str__(self):
-        return self.image_name
 
 class Attribute(models.Model):
     article_id = models.ForeignKey('Article',to_field='id',on_delete=models.CASCADE,related_name='attribute_article')

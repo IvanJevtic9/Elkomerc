@@ -17,7 +17,7 @@ import sys
 from tablib import Dataset
 import openpyxl
 
-from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer
+from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer
 from product.models import Article, Producer, Attribute, ArticleImage
 
 from account.api.permissions import AdminAuthenticationPermission
@@ -124,6 +124,60 @@ class ArticleImportApiView(generics.CreateAPIView):
                     pass
             
             return JsonResponse({"message": "File has been imported successfully."}, status=200)
+
+class ProducerImagesImportApiView(generics.CreateAPIView):
+    permission_classes = [AdminAuthenticationPermission]
+    serializer_class = ProducerImagesImportSerializer
+    queryset = Producer.objects.all()
+
+    def get_serializer_class(self):
+        return ProducerImagesImportSerializer
+
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            exel_file_import = serializer.validated_data.get('exel_file')
+            path = serializer.validated_data.get('directory_path')              
+
+            dataset = Dataset()
+            imported_data = dataset.load(request.FILES[exel_file_import.field_name])
+            for prod in imported_data.dict:
+                image_file = Image.open(path+prod['image_name'])
+                split_name = image_file.filename.split('\\')
+
+                if image_file.height > 250 and image_file.width > 250 and image_file.mode != 'P':
+                    h_p = 200/image_file.height
+                    w_p = 200/image_file.width
+
+                    per = h_p if h_p > w_p else w_p
+
+                    image_file = image_file.resize((int(per*image_file.height),int(per*image_file.width)),Image.ANTIALIAS)
+
+                if image_file.format is None:
+                    image_format = split_name[len(split_name)-1].split('.')[1]
+                    image_file.format = 'PNG' if image_format == 'png' else 'JPEG'
+                
+                image_file.filename = split_name[len(split_name)-1]
+
+                buffer = BytesIO()
+                image_file.save(buffer, format=image_file.format, quality=100)
+                buffer.seek(0)
+                image_django_file = InMemoryUploadedFile(buffer, image_file.filename, split_name[len(split_name)-1], 'image/jpeg', buffer.tell(), None)
+                
+                try:
+                    producer_obj = Producer.objects.get(id=prod['producer_id'])
+                    producer_obj.profile_image.delete(save=False)
+
+                    producer_obj.profile_image.save(image_django_file.name,image_django_file)
+                    producer_obj.save()
+                except Producer.DoesNotExist:
+                    pass
+            return JsonResponse({"message": "Images have been imported sucessfully."}, status=200)        
 
 class ArticleImagesImportApiView(generics.CreateAPIView):
     permission_classes = [AdminAuthenticationPermission]

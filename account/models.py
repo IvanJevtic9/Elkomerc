@@ -78,3 +78,33 @@ class Company(models.Model):
 
     def __str__(self):
         return self.company_name
+
+class Stars(models.Model):
+    email = models.ForeignKey('Account', to_field='email', on_delete=models.CASCADE, related_name='acc_stars')
+    article_id = models.ForeignKey('product.Article', to_field='id', on_delete=models.CASCADE,related_name='art_stars')
+
+    value = models.IntegerField()
+    class Meta:
+        verbose_name = "Star"
+        verbose_name_plural = "Stars"
+
+    def __str__(self):
+        return str(self.value) + ' star'
+
+class WishList(models.Model):
+    email = models.ForeignKey('Account', to_field='email', on_delete=models.CASCADE, related_name='acc_wishlist')
+    article_id = models.ForeignKey('product.Article', to_field='id', on_delete=models.CASCADE,related_name='art_wishlist')
+
+    class Meta:
+        verbose_name = "Wish"
+        verbose_name_plural = "WishList"
+
+class Comments(models.Model):
+    email = models.ForeignKey('Account', to_field='email', on_delete=models.CASCADE, related_name='acc_comments')
+    article_id = models.ForeignKey('product.Article', to_field='id', on_delete=models.CASCADE,related_name='art_comments')
+
+    comment = models.TextField(max_length=400)
+
+    class Meta:
+        verbose_name = "Comment"
+        verbose_name_plural = "Comments"

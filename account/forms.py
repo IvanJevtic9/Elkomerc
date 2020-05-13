@@ -2,7 +2,7 @@ from django import forms
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 
-from .models import Account, User, Company, PostCode
+from .models import Account, User, Company, PostCode, Stars, WishList, Comments
 
 class AccountCreateForm(forms.ModelForm):
     password1 = forms.CharField(label='Password', widget=forms.PasswordInput)
@@ -47,15 +47,18 @@ class UserForm(forms.ModelForm):
 
     def clean(self, *args, **kwargs):
         email = self.data.get('email')
-
         qs = Account.objects.get(email=email)
-        if qs is None:
-            raise forms.ValidationError(_('Email does not exist.'))
-        else:
-            qs_user = User.objects.filter(email=email)
-            qs_company = Company.objects.filter(email=email) 
-            if qs_user.exists() or qs_company.exists():
-                raise forms.ValidationError(_('This email address is already used by another user'))
+
+        edit = False if self.instance.id is None else True
+        account_changed = False if (not edit) or self.instance.email_id == email else True
+
+        qs_user = User.objects.filter(email=email)
+        qs_company = Company.objects.filter(email=email) 
+        if (qs_user.exists() or qs_company.exists()) and account_changed:
+            raise forms.ValidationError(_('This email address is already used by another user.'))
+
+        if (qs_user.exists() or qs_company.exists()) and not edit:
+            raise forms.ValidationError(_('This email address is already used by another user.'))
 
         qs.account_type = 'USR'
         qs.save()
@@ -74,20 +77,27 @@ class CompanyForm(forms.ModelForm):
 
     def clean(self, *args, **kwargs):
         email = self.data.get('email')
-
         company_name = self.data.get('company_name')
+        qs = Account.objects.get(email=email)
+
+        edit = False if self.instance.id is None else True
+        account_changed = False if (not edit) or self.instance.email_id == email else True
+        company_name_changed = False if (not edit) or self.instance.company_name == company_name else True
+
         qs_company = Company.objects.filter(company_name=company_name)
-        if qs_company.exists():
+        if qs_company.exists() and not edit:
+            raise forms.ValidationError(_('This company name already exists.'))
+        
+        if qs_company.exists() and company_name_changed:
             raise forms.ValidationError(_('This company name already exists.'))
 
-        qs = Account.objects.get(email=email)
-        if qs is None:
-            raise forms.ValidationError(_('Email does not exist.'))
-        else:
-            qs_user = User.objects.filter(email=email)
-            qs_company = Company.objects.filter(email=email) 
-            if qs_user.exists() or qs_company.exists():
-                raise forms.ValidationError(_('This email address is already used by another user.'))
+        qs_user = User.objects.filter(email=email)
+        qs_company = Company.objects.filter(email=email) 
+        if (qs_user.exists() or qs_company.exists()) and account_changed:
+            raise forms.ValidationError(_('This email address is already used by another user.'))
+
+        if (qs_user.exists() or qs_company.exists()) and not edit:
+            raise forms.ValidationError(_('This email address is already used by another user.'))
 
         qs.account_type = 'CMP'
         qs.save()
@@ -102,3 +112,72 @@ class PostForm(forms.ModelForm):
             'zip_code',
             'city'
         ]        
+
+class StarsForm(forms.ModelForm):
+    class Meta:
+        model = Stars
+        fields = [
+            'id',
+            'email',
+            'article_id',
+            'value'
+        ]
+
+    def clean(self, *args, **kwargs):
+        email = self.data.get('email')
+        article_id = int(self.data.get('article_id'))
+        value = int(self.data.get('value'))
+
+        edit = False if self.instance.id is None else True
+        changed_email = False if (not edit) or self.instance.email_id == email else True
+        changed_article = False if (not edit) or self.instance.article_id_id == article_id else True
+
+        qs = Stars.objects.filter(email=email)
+        qs = qs.filter(article_id=article_id)
+        if qs.exists() and not edit:
+            raise forms.ValidationError(_('This user already rate the article.'))
+
+        if (changed_email or changed_article) and qs.exists():
+            raise forms.ValidationError(_('This user already rate the article.'))
+
+        if value > 5 or value < 1:
+            raise forms.ValidationError(_('Start rate must be between or equal 1 and 5.'))
+        
+        return super().clean(*args, **kwargs)
+
+class WishListForm(forms.ModelForm):
+    class Meta:
+        model = WishList
+        fields = [
+            'id',
+            'email',
+            'article_id'
+        ]
+
+    def clean(self, *args, **kwargs):
+        email = self.data.get('email')
+        article_id = int(self.data.get('article_id'))
+
+        edit = False if self.instance.id is None else True
+        changed_email = False if (not edit) or self.instance.email_id == email else True
+        changed_article = False if not edit or self.instance.article_id_id == article_id else True
+
+        qs = WishList.objects.filter(email=email)
+        qs = qs.filter(article_id=article_id)
+        if qs.exists() and not edit:
+            raise forms.ValidationError(_('This user already has the article in the wishlist.'))
+        
+        if (changed_email or changed_article) and qs.exists():
+            raise forms.ValidationError(_('This user already rate the article.'))
+
+        return super().clean(*args, **kwargs)
+
+class CommentsForm(forms.ModelForm):
+    class Meta:
+        model = Comments
+        fields = [
+            'id',
+            'email',
+            'article_id',
+            'comment'
+        ]

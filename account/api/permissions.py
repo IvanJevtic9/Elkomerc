@@ -22,6 +22,12 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
         return obj.user.core_filters.get('email').email == request.user.email
 
+class IsOwner(permissions.BasePermission):
+
+    message = 'You do not have permissions for this request.'
+    def has_object_permission(self, request, view, obj):
+        return obj.email_id == request.user.email
+
 class AdminAuthenticationPermission(permissions.BasePermission):
 
     def has_permission(self, request, view):

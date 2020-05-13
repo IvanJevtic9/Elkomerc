@@ -41,6 +41,7 @@
    1. Srediti Producer-e , izbrisati tabelu ProducerImages . Svaki producer ce imati samo jednu sliku ...  DONE
    2. Pronaci sve logoe za firmu i ubaciti DONE
    3. Treba napraviti tabele za:
+      *api-ji:
       - listwish detail, list (dodavanje , brisanje) ...
       - like  detail, list (dodavanje , brisanje ) ...
       - rabati samo izlistavanje ...
@@ -60,3 +61,16 @@
    -Hp , dal mi to uopste prodajemo ??
    -ACK nema lep logo
    (fali 5 logoa) - ako nemamo robu na lageru za tog proizvodjaca neprekazivati logo
+
+
+* sve po useru
+
+listwish - serializer za izlistavanje po useru. 
+   list api view 
+   detail api view , brisanje 
+
+Stars - serializer
+   starts list api view 
+      - like  detail, list (dodavanje , brisanje ) ...
+      - rabati samo izlistavanje ...
+      - paymentOrder dodavanje , izlistivanje , brisanje , izmena ..

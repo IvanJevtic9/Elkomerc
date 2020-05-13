@@ -11,7 +11,13 @@ from .views import (
                     PostCodeDetailView,
                     activate,
                     reset_password,
-                    ChangePasswordViaEmailAPIView
+                    ChangePasswordViaEmailAPIView,
+                    WishlistListApiView,
+                    WishlistDetailApiView,
+                    StarsListApiView,
+                    StarsDetailApiView,
+                    CommentsListApiView,
+                    CommentsDetailApiView
 )
 
 urlpatterns = [
@@ -25,4 +31,10 @@ urlpatterns = [
     url(r'^accounts/reset-password/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', reset_password, name='reset_password'),
     url(r'^post-codes/$', PostCodeListView.as_view()),
     url(r'^post-codes/create/$', PostCodeDetailView.as_view()),
+    url(r'^accounts/wishlist/$', WishlistListApiView.as_view()),
+    url(r'^accounts/wishlist/(?P<id>\d+)/$', WishlistDetailApiView.as_view(), name='wishlist'),
+    url(r'^accounts/stars/$', StarsListApiView.as_view()),
+    url(r'^accounts/stars/(?P<id>\d+)/$', StarsDetailApiView.as_view(), name='stars'),
+    url(r'^accounts/comments/$', CommentsListApiView.as_view()),
+    url(r'^accounts/comments/(?P<id>\d+)/$', CommentsDetailApiView.as_view(), name='comments'),
 ]

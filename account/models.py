@@ -33,7 +33,7 @@ class Account(AbstractUser):
     address = models.CharField(max_length=100,blank=True,null=True)
     zip_code = models.CharField(max_length=15)
     city = models.CharField(max_length=50)
-    phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True)
+    phone_number = models.CharField(max_length=17, blank=True)
     account_type = models.CharField(max_length=3,choices=ACC_TYPE,default='USR')
     profile_image = models.ImageField(blank=True,null=True,upload_to='profile_img/')
 
@@ -70,7 +70,7 @@ class Company(models.Model):
     email = models.ForeignKey('Account', to_field='email', on_delete=models.CASCADE, related_name='company')
     company_name = models.CharField(max_length=50, unique=True)
     pib = models.CharField(max_length=30)                 
-    fax = models.CharField(validators=[phone_regex], max_length=17, blank=True)
+    fax = models.CharField(max_length=17, blank=True)
 
     class Meta:
         verbose_name = "Company"

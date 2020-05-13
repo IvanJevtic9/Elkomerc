@@ -19,10 +19,11 @@ from django.template.loader import render_to_string
 import json
 
 from account.activation_tokens import account_activation_token, account_change_password_token
-from .serializers import AccountRegisterSerializer, AccountListSerializer, AccountDetailSerializer, AccountChangePasswordSerializer, PostCodeSerializer, PostCodeCreateSerializer, AccountResetPasswordSerializer
-from account.models import Account, Company, User, PostCode
+from .serializers import AccountRegisterSerializer, AccountListSerializer, AccountDetailSerializer, AccountChangePasswordSerializer, PostCodeSerializer, PostCodeCreateSerializer, AccountResetPasswordSerializer, WishlistListSerializer, WishListDetailSerializer, StarsListSerializer, StarsDetailSerializer, CommentsListSerializer, CommentsDetailSerializer
+from account.models import Account, Company, User, PostCode, WishList, Stars, Comments
+from product.models import Article
 
-from .permissions import AnonPermissionOnly, IsOwnerOrReadOnly
+from .permissions import AnonPermissionOnly, IsOwnerOrReadOnly, IsOwner
 from account.tasks import send_email, remove_unactive_accounts
 
 jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
@@ -64,11 +65,13 @@ class AuthView(APIView):
                 account = account_obj
                 payload = jwt_payload_handler(account)
                 token = jwt_encode_handler(payload)
-                response = jwt_response_payload_handler(token, email, account.id, account.is_staff)
+                response = jwt_response_payload_handler(
+                    token, email, account.id, account.is_staff)
 
                 return Response(response)
             else:
-                return Response({"message": "INVALID_PASSWORD"}, status=401) 
+                return Response({"message": "INVALID_PASSWORD"}, status=401)
+
 
 class RegisterAPIView(generics.CreateAPIView):
     queryset = Account.objects.all()
@@ -118,7 +121,7 @@ class RegisterAPIView(generics.CreateAPIView):
                 company_obj.save()
 
             else:
-                first_name = data.get('first_name') 
+                first_name = data.get('first_name')
                 last_name = data.get('last_name')
                 date_of_birth = data.get('date_of_birth')
 
@@ -127,7 +130,8 @@ class RegisterAPIView(generics.CreateAPIView):
                 user_obj.save()
 
             current_site = get_current_site(request).domain
-            send_email.delay(current_site=current_site,account_id=account_obj.id,to_email=serializer.validated_data.get('email'),template='acc_active_email.html')
+            send_email.delay(current_site=current_site, account_id=account_obj.id,
+                             to_email=serializer.validated_data.get('email'), template='acc_active_email.html')
 
             return JsonResponse({"message": "Please confirm your email address to complete the registration."}, status=200)
 
@@ -145,6 +149,7 @@ def activate(request, uidb64, token):
         return redirect(settings.CLIENT_URL+'/login/activation/?status=200')
     else:
         return redirect(settings.CLIENT_URL+'/login/activation/?status=400')
+
 
 class ChangePasswordViaEmailAPIView(generics.CreateAPIView):
     serializer_class = AccountResetPasswordSerializer
@@ -165,9 +170,11 @@ class ChangePasswordViaEmailAPIView(generics.CreateAPIView):
             account_obj = Account.objects.get(email=to_email)
 
             current_site = get_current_site(request).domain
-            send_email.delay(current_site=current_site,account_id=account_obj.id,to_email=to_email,template='acc_change_password.html')
+            send_email.delay(current_site=current_site, account_id=account_obj.id,
+                             to_email=to_email, template='acc_change_password.html')
 
         return JsonResponse({"message": "Please check your email address to reset password."}, status=200)
+
 
 def reset_password(request, uidb64, token):
     try:
@@ -180,6 +187,7 @@ def reset_password(request, uidb64, token):
         return JsonResponse({"message": "Reset password"}, status=200)
     else:
         return JsonResponse({"message": "Activation link is invalid!"}, status=500)
+
 
 class AccountListApiView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, ]
@@ -303,7 +311,7 @@ class AccountDetailApiView(
 
             account.save()
 
-        return JsonResponse({"message": "Account has been updated successfully."}, status=200)
+        return super.get(request, *args, **kwargs)
 
 
 class AccountChangePassword(
@@ -343,7 +351,7 @@ class AccountChangePassword(
 
 
 class PostCodeListView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, ]
     serializer_class = PostCodeSerializer
 
     def get_queryset(self, *args, **kwargs):
@@ -386,3 +394,172 @@ class PostCodeDetailView(generics.CreateAPIView):
             post_code_obj.save()
 
             return Response({"message": "Post code has been created."}, status=201)
+
+
+class WishlistListApiView(generics.ListAPIView):
+    permission_classes = [IsOwnerOrReadOnly, ]
+    serializer_class = WishlistListSerializer
+    pagination_class = None
+
+    def get_queryset(self, *args, **kwargs):
+        return WishList.objects.filter(email=self.request.user.email).order_by('id')
+
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            email = request.user.email
+            article_id = serializer.validated_data.get('article_id', None)
+
+            article_obj = Article.objects.get(id=article_id)
+            account_obj = Account.objects.get(email=email)
+
+            wish_obj = WishList(email=account_obj, article_id=article_obj)
+            wish_obj.save()
+
+            return  super().get(request, *args, **kwargs)  
+
+class WishlistDetailApiView(mixins.DestroyModelMixin,
+                            generics.RetrieveAPIView):
+    permission_classes = [IsOwner, ]
+    serializer_class = WishListDetailSerializer
+    pagination_class = None
+    lookup_field = 'id'
+
+    def get_queryset(self, *args, **kwargs):
+        return WishList.objects.all()
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+class StarsListApiView(generics.ListAPIView, generics.CreateAPIView):
+    permission_classes = [IsOwnerOrReadOnly, ]
+    serializer_class = StarsListSerializer
+    pagination_class = None
+
+    def get_queryset(self, *args, **kwargs):
+        return Stars.objects.filter(email=self.request.user.email).order_by('id')
+
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            email = request.user.email
+            article_id = serializer.validated_data.get('article_id', None)
+            value = serializer.validated_data.get('value', None)
+
+            article_obj = Article.objects.get(id=article_id)
+            account_obj = Account.objects.get(email=email)
+
+            star_obj = Stars(email=account_obj, article_id=article_obj,value=value)
+            star_obj.save()
+
+            return  super().get(request, *args, **kwargs)                  
+
+class StarsDetailApiView(mixins.DestroyModelMixin,
+                         mixins.UpdateModelMixin,
+                         generics.RetrieveAPIView):
+    permission_classes = [IsOwner, ]
+    serializer_class = StarsDetailSerializer
+    pagination_class = None
+    lookup_field = 'id'
+
+    def get_queryset(self, *args, **kwargs):
+        return Stars.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        return self.update(self, request, *args, **kwargs)    
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            stars_id = self.kwargs['id']
+            stars_obj = Stars.objects.get(id=stars_id)
+
+            stars_obj.value = serializer.validated_data.get('value', None)
+            stars_obj.save()
+
+            return super().get(request, *args, **kwargs)    
+
+class CommentsListApiView(generics.ListAPIView, generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, ]
+    serializer_class = CommentsListSerializer
+    pagination_class = None
+
+    def get_queryset(self, *args, **kwargs):
+        queryset_list = Comments.objects.all()
+        article_id_query = self.request.GET.get('article_id')
+
+        if article_id_query:
+            queryset_list = queryset_list.filter(
+                Q(article_id=article_id_query)
+            ).distinct()
+
+        return queryset_list
+
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            email = request.user.email
+            article_id = serializer.validated_data.get('article_id', None)
+            try:
+                article_id = article_id.id
+            except AttributeError:
+                article_id = article_id        
+            comment = serializer.validated_data.get('comment', None)
+
+            article_obj = Article.objects.get(id=article_id)
+            account_obj = Account.objects.get(email=email)
+
+            comment_obj = Comments(email=account_obj, article_id=article_obj,comment=comment)
+            comment_obj.save()
+
+            return  super().get(request, *args, **kwargs)
+
+class CommentsDetailApiView(mixins.DestroyModelMixin,
+                         mixins.UpdateModelMixin,
+                         generics.RetrieveAPIView):
+    permission_classes = [IsOwner, ]
+    serializer_class = CommentsDetailSerializer
+    pagination_class = None
+    lookup_field = 'id'
+
+    def get_queryset(self, *args, **kwargs):
+        return Comments.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        return self.update(self, request, *args, **kwargs)    
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            comment_id = self.kwargs['id']
+            comment_obj = Comments.objects.get(id=comment_id)
+
+            comment_obj.comment = serializer.validated_data.get('comment', None)
+            comment_obj.save()
+
+            return super().get(request, *args, **kwargs) 

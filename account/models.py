@@ -102,7 +102,9 @@ class WishList(models.Model):
 class Comments(models.Model):
     email = models.ForeignKey('Account', to_field='email', on_delete=models.CASCADE, related_name='acc_comments')
     article_id = models.ForeignKey('product.Article', to_field='id', on_delete=models.CASCADE,related_name='art_comments')
-
+    
+    time_created = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
     comment = models.TextField(max_length=400)
 
     class Meta:

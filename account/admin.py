@@ -133,21 +133,22 @@ class WishListAdmin(admin.ModelAdmin):
     ordering = ('article_id__article_name', 'email',)
 
 class CommentsAdmin(admin.ModelAdmin):
+    readonly_fields = ('time_created', 'last_modified')
     form = CommentsForm
-    list_display = ('id', 'email', 'article_id', 'comment')
+    list_display = ('id', 'email', 'article_id', 'comment','time_created', 'last_modified')
 
     fieldsets = (
-        ("General info", {'fields': ('email', 'article_id', 'comment',)}),
+        ("General info", {'fields': ('email', 'article_id', 'comment' )}),
     )
 
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'article_id', 'comment', ),
+            'fields': ('email', 'article_id', 'comment',  ),
         }),
     )
     search_fields = ('article_id__article_name', 'email__email', 'comment',)
-    ordering = ('article_id__article_name', 'email', 'comment',)
+    ordering = ('article_id__article_name', 'email', 'comment', )
 
 
 # Register your models here.

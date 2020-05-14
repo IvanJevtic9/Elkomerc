@@ -6,8 +6,11 @@ from django.utils.translation import ugettext_lazy as _
 from product.models import Attribute, Article, ArticleImage, Producer, ProductGroup
 from product_category.models import Category, SubCategory
 
+from account.models import Stars, Comments
+
 import mercantile
 import os
+
 
 class ProducerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,9 +23,11 @@ class ProducerSerializer(serializers.ModelSerializer):
             'description'
         ]
 
+
 class ProducerListSerializer(serializers.ModelSerializer):
     uri = serializers.SerializerMethodField(read_only=True)
     sub_categories_id = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Producer
         fields = [
@@ -39,17 +44,19 @@ class ProducerListSerializer(serializers.ModelSerializer):
 
         for art in artical_list:
             sub_categories.append(art.sub_category_id.id)
-        
+
         return set(sub_categories)
 
     def get_uri(self, obj):
         request = self.context.get('request')
         return api_reverse("product:detail", kwargs={"id": obj.id}, request=request)
 
+
 class ProducerInfoSerializer(serializers.ModelSerializer):
     uri = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
-        model =  Producer
+        model = Producer
         fields = [
             'id',
             'producer_name',
@@ -61,6 +68,7 @@ class ProducerInfoSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return api_reverse("product:detail", kwargs={"id": obj.id}, request=request)
 
+
 class ProductGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductGroup
@@ -69,9 +77,12 @@ class ProductGroupSerializer(serializers.ModelSerializer):
             'group_name'
         ]
 
+
 class ArticleListSerializer(serializers.ModelSerializer):
     profile_picture = serializers.SerializerMethodField(read_only=True)
     uri = serializers.SerializerMethodField(read_only=True)
+    article_rate = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Article
         fields = [
@@ -80,6 +91,7 @@ class ArticleListSerializer(serializers.ModelSerializer):
             'article_name',
             'uri',
             'profile_picture',
+            'article_rate',
             'price'
         ]
 
@@ -89,26 +101,44 @@ class ArticleListSerializer(serializers.ModelSerializer):
         host = self.context.get('request')._request._current_scheme_host
 
         for img in list_img:
-            if profile_image is  None:
+            if profile_image is None:
                 profile_image = host + img.image.url
             if img.purpose == '#profile_image':
                 profile_image = host + img.image.url
-                break;
+                break
 
         return profile_image
+
+    def get_article_rate(self, obj):
+        email = self.context.get('request').user.email
+
+        qs = Stars.objects.filter(email=email)
+        qs = qs.filter(article_id=obj.id)
+
+        if qs.exists():
+            return qs[0].value
+        else:
+            return None
 
     def get_uri(self, obj):
         request = self.context.get('request')
         return api_reverse("product:article", kwargs={"id": obj.id}, request=request)
 
+
 class ArticleDetailSerializer(serializers.ModelSerializer):
-    producer_info = ProducerInfoSerializer(source='producer_id',read_only=True)
-    discount_group = ProductGroupSerializer(source='product_group_id',read_only=True)
+    producer_info = ProducerInfoSerializer(
+        source='producer_id', read_only=True)
+    discount_group = ProductGroupSerializer(
+        source='product_group_id', read_only=True)
     article_images = serializers.SerializerMethodField(read_only=True)
     currency = serializers.SerializerMethodField(read_only=True)
     attributes = serializers.SerializerMethodField(read_only=True)
     category = serializers.SerializerMethodField(read_only=True)
     unit_of_measure = serializers.SerializerMethodField(read_only=True)
+    number_of_rates = serializers.SerializerMethodField(read_only=True)
+    avg_rate = serializers.SerializerMethodField(read_only=True)
+    comments = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Article
         fields = [
@@ -124,8 +154,26 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
             'unit_of_measure',
             'price',
             'currency',
+            'number_of_rates',
+            'avg_rate',
+            'comments',
             'is_available'
         ]
+
+    def get_avg_rate(self, obj):
+        rate_sum = 0
+        qs = Stars.objects.filter(article_id=obj.id)
+
+        if qs.exists():
+            for q in qs:
+                rate_sum = rate_sum + q.value
+
+            return rate_sum/len(qs)
+
+        return None
+
+    def get_number_of_rates(self, obj):
+        return len(Stars.objects.filter(article_id=obj.id))
 
     def get_program_info(self, obj):
         request = self.context.get('request')
@@ -136,8 +184,23 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
                 "program_name": obj.program_id.program_name,
                 "producer_uri": api_reverse("product:detail", kwargs={"id": obj.program_id.producer_id.id}, request=request)
             }
-        
+
         return program_info
+
+    def get_comments(self, obj):
+        comments = []
+        qs = Comments.objects.filter(article_id=obj.id)
+        for q in qs:
+            obj = {
+                "comment_id": q.id,
+                "email": q.email.email,
+                "comment": q.comment,
+                "time_created": q.time_created,
+                "last_modified": q.last_modified
+            }
+            comments.append(obj)
+
+        return comments
 
     def get_article_images(self, obj):
         article_images = []
@@ -162,7 +225,6 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
     def get_attributes(self, obj):
         attributes = []
         list_att = Attribute.objects.filter(article_id=obj.id)
-        
 
         for l in list_att:
             obj_att = {
@@ -170,10 +232,10 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
                 "attribute_name": l.feature_id.feature_name,
                 "value": l.value,
                 "is_selectable": l.feature_id.is_selectable
-            }     
+            }
             attributes.append(obj_att)
 
-        return attributes               
+        return attributes
 
     def get_category(self, obj):
         category = {
@@ -188,8 +250,10 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
     def get_unit_of_measure(self, obj):
         return obj.get_unit_of_measure_display()
 
+
 class ArticleImportSerializer(serializers.ModelSerializer):
     file_import = serializers.FileField(required=True)
+
     class Meta:
         model = Article
         fields = [
@@ -199,9 +263,11 @@ class ArticleImportSerializer(serializers.ModelSerializer):
     def validate_file_import(self, value):
         return value
 
+
 class ArticleImagesImportSerializer(serializers.ModelSerializer):
-    directory_path = serializers.CharField(max_length=500,required=True)
+    directory_path = serializers.CharField(max_length=500, required=True)
     exel_file = serializers.FileField(required=True)
+
     class Meta:
         model = ArticleImage
         fields = [
@@ -209,12 +275,14 @@ class ArticleImagesImportSerializer(serializers.ModelSerializer):
             'directory_path'
         ]
 
-    def validate_exel_file(self,value):
+    def validate_exel_file(self, value):
         return value
 
+
 class ProducerImagesImportSerializer(serializers.ModelSerializer):
-    directory_path = serializers.CharField(max_length=500,required=True)
+    directory_path = serializers.CharField(max_length=500, required=True)
     exel_file = serializers.FileField(required=True)
+
     class Meta:
         model = Producer
         fields = [
@@ -222,5 +290,5 @@ class ProducerImagesImportSerializer(serializers.ModelSerializer):
             'directory_path'
         ]
 
-    def validate_exel_file(self,value):
+    def validate_exel_file(self, value):
         return value

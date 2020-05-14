@@ -27,32 +27,12 @@ from account.models import (Account,
                             Stars,
                             Comments)
 
+from product.models import Article, ArticleImage
 
 jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
 jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
 jwt_response_payload_handler = api_settings.JWT_RESPONSE_PAYLOAD_HANDLER
 expire_delta = api_settings.JWT_EXPIRATION_DELTA
-
-
-class CompanySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Company
-        fields = [
-            'company_name',
-            'pib',
-            'fax'
-        ]
-
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = [
-            'first_name',
-            'last_name',
-            'date_of_birth'
-        ]
-
 
 class PostCodeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -62,31 +42,6 @@ class PostCodeSerializer(serializers.ModelSerializer):
             'zip_code',
             'city'
         ]
-
-
-class PostCodeCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PostCode
-        fields = [
-            'zip_code',
-            'city'
-        ]
-
-    def validate_zip_code(self, value):
-        qs = PostCode.objects.filter(zip_code=value)
-        if qs.exists():
-            raise serializers.ValidationError(
-                _("This zip code already exists."))
-
-        return value
-
-    def validate_city(self, value):
-        qs = PostCode.objects.filter(city=value)
-        if qs.exists():
-            raise serializers.ValidationError(_("This city already exists."))
-
-        return value
-
 
 class AccountRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -174,8 +129,8 @@ class AccountRegisterSerializer(serializers.ModelSerializer):
 
 
 class AccountListSerializer(serializers.ModelSerializer):
-    company = CompanySerializer(read_only=True, many=True)
-    user = UserSerializer(read_only=True, many=True)
+    company = serializers.SerializerMethodField(read_only=True)
+    user = serializers.SerializerMethodField(read_only=True)
     is_active = serializers.BooleanField(read_only=True)
     uri = serializers.SerializerMethodField(read_only=True)
 
@@ -200,10 +155,31 @@ class AccountListSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return api_reverse("account:detail", kwargs={"id": obj.id}, request=request)
 
+    def get_company(self,obj):
+        qs = Company.objects.filter(email=obj.email)
+        if qs.exists():
+            return {
+                "company_name": qs[0].company_name,
+                "pib": qs[0].pib,
+                "fax": qs[0].fax
+            }
+        else:
+            return {}
+
+    def get_user(self,obj):
+        qs = User.objects.filter(email=obj.email)
+        if qs.exists():
+            return {
+                "first_name": qs[0].first_name,
+                "last_name": qs[0].last_name,
+                "date_of_birth": qs[0].date_of_birth
+            }
+        else:
+            return {}
 
 class AccountDetailSerializer(serializers.ModelSerializer):
-    company = CompanySerializer(read_only=True, many=True)
-    user = UserSerializer(read_only=True, many=True)
+    company = serializers.SerializerMethodField(read_only=True)
+    user = serializers.SerializerMethodField(read_only=True)
     email = serializers.EmailField(read_only=True)
     is_active = serializers.BooleanField(read_only=True)
 
@@ -224,6 +200,28 @@ class AccountDetailSerializer(serializers.ModelSerializer):
         ]
 
         read_only_fields = ['email']
+
+    def get_company(self,obj):
+        qs = Company.objects.filter(email=obj.email)
+        if qs.exists():
+            return {
+                "company_name": qs[0].company_name,
+                "pib": qs[0].pib,
+                "fax": qs[0].fax
+            }
+        else:
+            return {}
+
+    def get_user(self,obj):
+        qs = User.objects.filter(email=obj.email)
+        if qs.exists():
+            return {
+                "first_name": qs[0].first_name,
+                "last_name": qs[0].last_name,
+                "date_of_birth": qs[0].date_of_birth
+            }
+        else:
+            return {}
 
     def validate(self, data):
         # Ovde ide validacija vezana za Company ili User
@@ -275,13 +273,6 @@ class AccountDetailSerializer(serializers.ModelSerializer):
                     {'first_name': _("Frist name is required.")})
 
         return data
-
-    def create(self, validated_data):
-        email = self.context.get('request').user.email
-        account_obj = Account.objects.get(email=email)
-
-        return account_obj
-
 
 class AccountChangePasswordSerializer(serializers.ModelSerializer):
     old_password = serializers.CharField(
@@ -351,19 +342,39 @@ class AccountResetPasswordSerializer(serializers.ModelSerializer):
 
 class WishlistListSerializer(serializers.ModelSerializer):
     uri = serializers.SerializerMethodField(read_only=True)
-
+    article_name = serializers.SerializerMethodField(read_only=True)
+    article_image = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = WishList
         fields = [
             'id',
             'email',
             'article_id',
+            'article_name',
+            'article_image',
             'uri'
         ]
 
     def get_uri(self, obj):
         request = self.context.get('request')
-        return api_reverse("account:wishlist", kwargs={"id": obj.id}, request=request)   
+        return api_reverse("account:wishlist", kwargs={"id": obj.id}, request=request)
+
+    def get_article_name(self, obj):
+        return Article.objects.get(id=obj.article_id.id).article_name
+
+    def get_article_image(self,obj):
+        profile_image = None
+        list_img = ArticleImage.objects.filter(article_id=obj.article_id.id)
+        host = self.context.get('request')._request._current_scheme_host
+
+        for img in list_img:
+            if profile_image is  None:
+                profile_image = host + img.image.url
+            if img.purpose == '#profile_image':
+                profile_image = host + img.image.url
+                break;
+
+        return profile_image
 
     def validate(self, obj):
         data = self.context.get('request').data
@@ -374,9 +385,11 @@ class WishlistListSerializer(serializers.ModelSerializer):
         wish_filter = wish_filter.filter(article_id=article_id)
 
         if(wish_filter.exists()):
-            raise serializers.ValidationError({'message':_("ALREADY_IN_WISHLIST")})
-        
+            raise serializers.ValidationError(
+                {'message': _("ALREADY_IN_WISHLIST")})
+
         return data
+
 
 class WishListDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -387,8 +400,10 @@ class WishListDetailSerializer(serializers.ModelSerializer):
             'article_id'
         ]
 
+
 class StarsListSerializer(serializers.ModelSerializer):
     uri = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Stars
         fields = [
@@ -406,7 +421,7 @@ class StarsListSerializer(serializers.ModelSerializer):
 
         return value
 
-    def validate(self, data):        
+    def validate(self, data):
         data = self.context.get('request').data
         email = self.context.get('request').user.email
         article_id = data.get('article_id')
@@ -415,13 +430,14 @@ class StarsListSerializer(serializers.ModelSerializer):
         star_filter = star_filter.filter(article_id=article_id)
 
         if(star_filter.exists()):
-            raise serializers.ValidationError({'message':_("ALREADY_RATE")})
-        
+            raise serializers.ValidationError({'message': _("ALREADY_RATE")})
+
         return data
 
     def get_uri(self, obj):
         request = self.context.get('request')
-        return api_reverse("account:stars", kwargs={"id": obj.id}, request=request)      
+        return api_reverse("account:stars", kwargs={"id": obj.id}, request=request)
+
 
 class StarsDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -440,6 +456,7 @@ class StarsDetailSerializer(serializers.ModelSerializer):
 
         return value
 
+
 class CommentsListSerializer(serializers.ModelSerializer):
     uri = serializers.SerializerMethodField(read_only=True)
     class Meta:
@@ -449,9 +466,11 @@ class CommentsListSerializer(serializers.ModelSerializer):
             'email',
             'article_id',
             'uri',
+            'time_created',
+            'last_modified',
             'comment'
         ]
-        read_only_fields = ['email']
+        read_only_fields = ['email', 'time_created', 'last_modified']
 
     def validate_comment(self, value):
         if len(value) > 400 and len(value) < 1:
@@ -461,18 +480,24 @@ class CommentsListSerializer(serializers.ModelSerializer):
 
     def get_uri(self, obj):
         request = self.context.get('request')
-        return api_reverse("account:comments", kwargs={"id": obj.id}, request=request)      
+        if isinstance(obj,Comments):
+            return api_reverse("account:comments", kwargs={"id": obj.id},request=request)
+        else:
+            return None
 
 class CommentsDetailSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Comments
-        fields = [
+        model=Comments
+        fields=[
             'id',
             'email',
             'article_id',
+            'time_created',
+            'last_modified',
             'comment'
         ]
-        read_only_fields = ['email', 'article_id']
+        read_only_fields=['email', 'article_id',
+            'time_created', 'last_modified']
 
     def validate_comment(self, value):
         if len(value) > 400 and len(value) < 1:

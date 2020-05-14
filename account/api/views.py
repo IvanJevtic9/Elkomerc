@@ -19,7 +19,7 @@ from django.template.loader import render_to_string
 import json
 
 from account.activation_tokens import account_activation_token, account_change_password_token
-from .serializers import AccountRegisterSerializer, AccountListSerializer, AccountDetailSerializer, AccountChangePasswordSerializer, PostCodeSerializer, PostCodeCreateSerializer, AccountResetPasswordSerializer, WishlistListSerializer, WishListDetailSerializer, StarsListSerializer, StarsDetailSerializer, CommentsListSerializer, CommentsDetailSerializer
+from .serializers import AccountRegisterSerializer, AccountListSerializer, AccountDetailSerializer, AccountChangePasswordSerializer, PostCodeSerializer, AccountResetPasswordSerializer, WishlistListSerializer, WishListDetailSerializer, StarsListSerializer, StarsDetailSerializer, CommentsListSerializer, CommentsDetailSerializer
 from account.models import Account, Company, User, PostCode, WishList, Stars, Comments
 from product.models import Article
 
@@ -331,9 +331,6 @@ class AccountChangePassword(
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
 
-    def patch(self, request, *args, **kwargs):
-        return self.patch(request, *args, **kwargs)
-
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.save()
@@ -348,7 +345,6 @@ class AccountChangePassword(
             account_obj.save()
 
             return JsonResponse({"message": "Password has been changed successfully."}, status=200)
-
 
 class PostCodeListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, ]
@@ -369,32 +365,6 @@ class PostCodeListView(generics.ListAPIView):
             ).distinct()
 
         return queryset_list
-
-
-class PostCodeDetailView(generics.CreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, ]
-    serializer_class = PostCodeCreateSerializer
-    queryset = PostCode.objects.all()
-
-    def get_serializer_class(self):
-        return PostCodeCreateSerializer
-
-    def post(self, request, *args, **kwargs):
-        return self.create(self, request, *args, **kwargs)
-
-    def create(self, request, *args, **kwargs):
-        request = request.request
-        serializer = self.get_serializer(data=request.data)
-
-        if serializer.is_valid(raise_exception=True):
-            zip_code = serializer.validated_data.get('zip_code', None)
-            city = serializer.validated_data.get('city', None)
-
-            post_code_obj = PostCode(zip_code=zip_code, city=city)
-            post_code_obj.save()
-
-            return Response({"message": "Post code has been created."}, status=201)
-
 
 class WishlistListApiView(generics.ListAPIView):
     permission_classes = [IsOwnerOrReadOnly, ]

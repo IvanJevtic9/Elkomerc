@@ -181,3 +181,4 @@ class CommentsForm(forms.ModelForm):
             'article_id',
             'comment'
         ]
+

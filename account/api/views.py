@@ -311,7 +311,7 @@ class AccountDetailApiView(
 
             account.save()
 
-        return super.get(request, *args, **kwargs)
+        return super().get(request, *args, **kwargs)
 
 
 class AccountChangePassword(

@@ -306,10 +306,12 @@ class AccountChangePasswordSerializer(serializers.ModelSerializer):
 
     def validate_new_password(self, value):
         try:
-            validators.validate_password(password=value)
+            password_validator1(value)
+            password_validator2(value)
+            password_validator3(value)
+            password_validator4(value)
         except exceptions.ValidationError as e:
-            message = e.messages[0]
-            raise serializers.ValidationError(_(message))
+            raise serializers.ValidationError(_(e.messages))
 
         return value
 

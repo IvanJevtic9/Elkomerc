@@ -110,7 +110,9 @@ class ArticleListSerializer(serializers.ModelSerializer):
         return profile_image
 
     def get_article_rate(self, obj):
-        email = self.context.get('request').user.email
+        email = None
+        if self.context.get('request').user.id is not None:
+            email = self.context.get('request').user.email
 
         qs = Stars.objects.filter(email=email)
         qs = qs.filter(article_id=obj.id)

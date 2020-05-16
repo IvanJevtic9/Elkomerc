@@ -26,19 +26,16 @@ class SubCategorySerializer(serializers.ModelSerializer):
                 "id": q.feature_id.id,
                 "feature_name": q.feature_id.feature_name,
                 "data_type": q.feature_id.data_type,
-                "attributes": [],
+                "values": [],
                 "is_selectable": q.feature_id.is_selectable
             }
 
             att_list = Attribute.objects.filter(feature_id=q.feature_id.id)
             for att in att_list:
-                att_obj = {
-                    'id': att.id,
-                    'value': att.value
-                }
-                feat_obj.get('attributes').append(att_obj)
+                feat_obj.get('values').append(att.value)
 
-            features.append(feat_obj)
+            if len(feat_obj.get('values')) > 0:
+                features.append(feat_obj)
 
         return features
 

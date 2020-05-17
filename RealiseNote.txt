@@ -34,6 +34,8 @@
     1. Dodata pretraga po porducer id-u ?producer=id nacin koriscenja (http://localhost:8000/api/product/articles/) article list api
     2. Popravljen producer , vraca jednu sliku , producer_icon , kao i listu sub_categories_id  exmpl [ 1, 2, 3] (http://localhost:8000/api/product/producers/)
 
+   #Izmene Dodane tabele za Payment order , payment item , user disocunts u admin delu ... Ostalo da se urade 2 api view-a ... 
+   
 
     #D:\source\DjangoRepos\Elkomerc docs\article_images 
 

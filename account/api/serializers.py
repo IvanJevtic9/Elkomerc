@@ -25,9 +25,10 @@ from account.models import (Account,
                             PostCode,
                             WishList,
                             Stars,
-                            Comments)
+                            Comments,
+                            UserDiscount)
 
-from product.models import Article, ArticleImage
+from product.models import Article, ArticleImage, ProductGroup
 
 jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
 jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
@@ -182,6 +183,7 @@ class AccountDetailSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField(read_only=True)
     email = serializers.EmailField(read_only=True)
     is_active = serializers.BooleanField(read_only=True)
+    discounts = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Account
@@ -196,6 +198,7 @@ class AccountDetailSerializer(serializers.ModelSerializer):
             'account_type',
             'company',
             'user',
+            'discounts',
             'is_active'
         ]
 
@@ -222,6 +225,20 @@ class AccountDetailSerializer(serializers.ModelSerializer):
             }
         else:
             return {}
+
+    def get_discounts(self, obj):
+        discounts = []
+        qs = UserDiscount.objects.filter(email=obj.email)
+
+        for q in qs:
+            dis = {
+                "id": q.id,
+                "product_group": q.product_group_id.group_name,
+                "value": q.value
+            }
+            discounts.append(dis)
+
+        return discounts
 
     def validate(self, data):
         # Ovde ide validacija vezana za Company ili User

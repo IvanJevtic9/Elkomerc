@@ -38,8 +38,8 @@ class SubCategoryAdmin(ImportExportModelAdmin):
             'fields': ('id', 'category_id', 'sub_category_name'),
         }),
     )
-    search_fields = ('id', 'category_id', 'sub_category_name',)
-    ordering = ('id', 'category_id', 'sub_category_name',)
+    search_fields = ('id', 'category_id__category_name', 'sub_category_name',)
+    ordering = ('id', 'category_id__category_name', 'sub_category_name',)
 
 class FeatureAdmin(ImportExportModelAdmin):
     form = FeatureForm
@@ -73,8 +73,8 @@ class FloorFeatureAdmin(ImportExportModelAdmin):
             'fields': ('id', 'sub_category_id', 'feature_id'),
         }),
     )
-    search_fields = ('id', 'sub_category_id', 'feature_id',)
-    ordering = ('id', 'sub_category_id', 'feature_id',)
+    search_fields = ('id', 'sub_category_id__sub_category_name', 'feature_id__feature_name',)
+    ordering = ('id', 'sub_category_id__sub_category_name', 'feature_id__feature_name',)
 
 
 admin.site.register(Category, CategoryAdmin)

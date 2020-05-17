@@ -10,7 +10,8 @@ from .models import (
     PostCode,
     Stars,
     WishList,
-    Comments)
+    Comments,
+    UserDiscount)
 
 from .forms import (
     UserForm,
@@ -19,7 +20,8 @@ from .forms import (
     PostForm,
     StarsForm,
     WishListForm,
-    CommentsForm)
+    CommentsForm,
+    UserDiscountForm)
 
 
 class PostCodeAdmin(ImportExportModelAdmin):
@@ -150,6 +152,22 @@ class CommentsAdmin(admin.ModelAdmin):
     search_fields = ('article_id__article_name', 'email__email', 'comment',)
     ordering = ('article_id__article_name', 'email', 'comment', )
 
+class UserDiscountAdmin(admin.ModelAdmin):
+    form = UserDiscountForm
+    list_display = ('id', 'email', 'product_group_id', 'value')
+
+    fieldsets = (
+        ("General info", {'fields': ('email', 'product_group_id', 'value',)}),
+    )
+
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email', 'product_group_id', 'value', ),
+        }),
+    )
+    search_fields = ('email__email', 'product_group_id__group_name', 'value',)
+    ordering = ('email__email', 'product_group_id__group_name', 'value',)
 
 # Register your models here.
 admin.site.register(Account, AccountAdmin)
@@ -159,5 +177,6 @@ admin.site.register(PostCode, PostCodeAdmin)
 admin.site.register(Stars, StarsAdmin)
 admin.site.register(WishList, WishListAdmin)
 admin.site.register(Comments, CommentsAdmin)
+admin.site.register(UserDiscount, UserDiscountAdmin)
 
 admin.site.unregister(Group)

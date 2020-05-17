@@ -4,6 +4,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from django.core.validators import validate_email
 from django.core.validators import RegexValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 phone_regex = RegexValidator(
     regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
@@ -83,7 +84,7 @@ class Stars(models.Model):
     email = models.ForeignKey('Account', to_field='email', on_delete=models.CASCADE, related_name='acc_stars')
     article_id = models.ForeignKey('product.Article', to_field='id', on_delete=models.CASCADE,related_name='art_stars')
 
-    value = models.IntegerField()
+    value = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(5)])
     class Meta:
         verbose_name = "Star"
         verbose_name_plural = "Stars"
@@ -110,3 +111,14 @@ class Comments(models.Model):
     class Meta:
         verbose_name = "Comment"
         verbose_name_plural = "Comments"
+
+
+class UserDiscount(models.Model):
+    email = models.ForeignKey('Account',to_field='email',on_delete=models.CASCADE, related_name='acc_discount')
+    product_group_id = models.ForeignKey('product.ProductGroup', to_field='id', on_delete=models.CASCADE, related_name='grp_discount')
+
+    value = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
+
+    class Meta:
+        verbose_name = "User discount"
+        verbose_name_plural = "User discounts"

@@ -1,7 +1,9 @@
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 
-from .models import Producer, ProductGroup, Attribute, Article, ArticleImage
+from .models import Producer, ProductGroup, Attribute, Article, ArticleImage, PaymentItem, PaymentOrder
+
+from account.models import UserDiscount
 
 class ProducerForm(forms.ModelForm):
     class Meta:
@@ -86,3 +88,62 @@ class ArticleImageForm(forms.ModelForm):
         if commit:
             article_image.save()
         return article_image    
+        
+class PaymentItemForm(forms.ModelForm):
+    class Meta:
+        model = PaymentItem
+        fields = [
+            'id',
+            'article_id',
+            'payment_order_id',
+            'user_discount',
+            'article_price',
+            'number_of_pieces'
+        ]
+    def clean(self, *args, **kwargs):
+        id = self.instance.id
+
+        payment_order_id = int(self.data.get('payment_order_id'))
+        article_id = int(self.data.get('article_id'))
+
+        order_id_changed = False if self.instance.payment_order_id.id == payment_order_id else True
+        article_id_changed = False if self.instance.article_id.id == article_id else True
+
+        qs = PaymentItem.objects.filter(payment_order_id=payment_order_id)
+        qs = qs.filter(article_id=article_id)
+
+        error = forms.ValidationError(_('Article: ' + str(article_id) + ' - this article already exists on the payment order'))
+        if qs.exists() and id is None:
+            raise error
+        elif order_id_changed and qs.exists():
+            raise error
+        elif article_id_changed and qs.exists():
+            raise error
+
+        return super().clean(*args, **kwargs)
+
+    def save(self, commit=True):
+        payment_item = super().save(commit=False)
+
+        article_obj = Article.objects.get(id=payment_item.article_id_id)
+        payment_item.article_price = article_obj.price
+        user_discount = UserDiscount.objects.filter(product_group_id=article_obj.product_group_id)
+        user_discount = user_discount.filter(email=payment_item.payment_order_id.email_id)
+        if user_discount.exists():
+            payment_item.user_discount = user_discount[0].value
+        else:
+            payment_item.user_discount = 0
+
+        payment_item.save()
+        return payment_item
+
+
+class PaymentOrderForm(forms.ModelForm):
+    class Meta:
+        model = PaymentOrder
+        fields = [
+            'id',
+            'email',
+            'method_of_payment',
+            'status'
+        ]

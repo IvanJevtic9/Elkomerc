@@ -17,8 +17,9 @@ import sys
 from tablib import Dataset
 import openpyxl
 
-from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer
+from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer, PaymentItemListSerializer, PaymentOrderListSerializer
 from product.models import Article, Producer, Attribute, ArticleImage, PaymentItem, PaymentOrder
+from account.models import UserDiscount
 
 from account.api.permissions import AdminAuthenticationPermission, IsOwner
 
@@ -68,7 +69,7 @@ class ArticleListApiView(generics.ListAPIView):
 
             articles_id = []
             for val in attr_queryset:
-                articles_id.append(val.id)
+                articles_id.append(val.article_id_id)
 
             queryset_list = queryset_list.filter(
                 Q(id__in=articles_id)
@@ -293,18 +294,18 @@ class ProducerListApiView(generics.ListAPIView):
 
 
 class PaymentItemDetailApiView(mixins.DestroyModelMixin,
-                              mixins.UpdateModelMixin,
-                              generics.RetrieveAPIView):
+                               mixins.UpdateModelMixin,
+                               generics.RetrieveAPIView):
     permission_classes = [IsOwner]
     serializer_class = PaymentItemDetailSerializer
     pagination_class = None
     lookup_field = 'id'
-    
+
     def get_queryset(self, *args, **kwargs):
         return PaymentItem.objects.all()
 
     def post(self, request, *args, **kwargs):
-        return self.update(self, request, *args, **kwargs)    
+        return self.update(self, request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
@@ -317,7 +318,67 @@ class PaymentItemDetailApiView(mixins.DestroyModelMixin,
             payment_item_id = self.kwargs['id']
             payment_item = PaymentItem.objects.get(id=payment_item_id)
 
-            payment_item.number_of_pieces = serializer.validated_data.get('number_of_pieces', None)
+            payment_item.number_of_pieces = serializer.validated_data.get(
+                'number_of_pieces')
             payment_item.save()
 
             return super().get(request, *args, **kwargs)
+
+
+class PaymentItemCreateApiView(generics.CreateAPIView,
+                               generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PaymentItemListSerializer
+
+    def get_queryset(self, *args, **kwargs):
+        payment_orders = PaymentOrder.objects.filter(email=self.request.user.email).order_by('id')
+        items = []
+        for po in payment_orders:
+            qs = PaymentItem.objects.filter(payment_order_id=po)
+            for q in qs:
+                items.append(q)
+        return items
+
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            email = request.user.email
+
+            article_id = serializer.validated_data.get('article_id')
+            payment_order_id = serializer.validated_data.get('payment_order_id')
+            number_of_pieces = serializer.validated_data.get('number_of_pieces')
+
+            payment_order = PaymentOrder.objects.get(id=payment_order_id)
+            article_obj = Article.objects.get(id=article_id)
+            article_price = article_obj.price
+
+            
+            user_discount = UserDiscount.objects.filter(email=email)
+            user_discount = user_discount.filter(product_group_id=article_obj.product_group_id)
+            if user_discount.exists():
+                user_discount = user_discount[0].value
+            else:    
+                user_discount = 0
+
+            payment_item = PaymentItem(article_id=article_obj,payment_order_id=payment_order,user_discount=user_discount,article_price=article_price,number_of_pieces=number_of_pieces)    
+            
+            payment_item.save()
+
+            return super().get(request, *args, **kwargs)
+
+class PaymentOrderListApiView(generics.CreateAPIView, generics.ListAPIView):
+    permission_classes = [IsOwner]
+    serializer_class = PaymentOrderListSerializer
+
+    def get_queryset(self, *args, **kwargs):
+        return  PaymentOrder.objects.filter(email=self.request.user.email).order_by('id')
+
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)
+
+            

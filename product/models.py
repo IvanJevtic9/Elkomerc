@@ -104,14 +104,14 @@ class ArticleImage(models.Model):
 
 class PaymentItem(models.Model):
     article_id = models.ForeignKey('Article', to_field='id', on_delete=models.CASCADE, related_name='item_article')
-    payment_order_id = models.ForeignKey('PaymentOrder',to_field='id', on_delete=models.CASCADE,related_name='item_order')
+    payment_order_id = models.ForeignKey('PaymentOrder',to_field='id', on_delete=models.CASCADE,related_name='items')
     user_discount = models.PositiveIntegerField(
         default=0, validators=[MinValueValidator(0), MaxValueValidator(100)],)
     article_price = models.DecimalField(max_digits=20, decimal_places=2, validators=[
                                 MinValueValidator(Decimal('0.01'))])
-
     number_of_pieces = models.PositiveIntegerField(
         default=1, validators=[MinValueValidator(1)])
+    reject_comment = models.TextField(null=True,blank=True)
 
     class Meta:
         verbose_name = "Payment item"
@@ -123,10 +123,10 @@ class PaymentItem(models.Model):
 
 class PaymentOrder(models.Model):
     STATUS_TYPE = (
+        ("DR", "Draft"),
         ("IN", "In the processing"),
         ("RE", "Rejected"),
         ("RW", "Rejected with counter offer"),
-        ("AP", "Approved"),
         ("WF", "Waiting for payment"),
         ("SS", "Shipment sent"),
         ("PD", "Products delivered"),
@@ -139,7 +139,7 @@ class PaymentOrder(models.Model):
     email = models.ForeignKey('account.Account', to_field='email',
                               on_delete=models.CASCADE, related_name='order_email')
     time_created = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=2, choices=STATUS_TYPE, default='IN')
+    status = models.CharField(max_length=2, choices=STATUS_TYPE, default='DR')
     method_of_payment = models.CharField(
         max_length=2, choices=METHOD_OF_PAYMENT_TYPE, default='PS')
 

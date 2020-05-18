@@ -1,5 +1,5 @@
 from django.conf.urls import url, include 
-from .views import ArticleListApiView, ProducerDetailApiView, ProducerListApiView, ArticleImportApiView, ArticleDetailApiView, ArticleImagesImportApiView, ProducerImagesImportApiView, PaymentItemDetailApiView
+from .views import ArticleListApiView, ProducerDetailApiView, ProducerListApiView, ArticleImportApiView, ArticleDetailApiView, ArticleImagesImportApiView, ProducerImagesImportApiView, PaymentItemDetailApiView, PaymentItemCreateApiView, PaymentOrderListApiView
 
 urlpatterns = [
     url(r'^articles/$', ArticleListApiView.as_view()),
@@ -10,5 +10,6 @@ urlpatterns = [
     url(r'^articles/images/import/$', ArticleImagesImportApiView.as_view()),
     url(r'^producers/images/import/$', ProducerImagesImportApiView.as_view()),
     url(r'^payments/item/(?P<id>\d+)/$', PaymentItemDetailApiView.as_view(), name='item_detail'),
-
+    url(r'^payments/item/$', PaymentItemCreateApiView.as_view()),
+    url(r'^payments/order/$', PaymentOrderListApiView.as_view()),
 ]

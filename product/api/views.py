@@ -302,9 +302,9 @@ class PaymentItemDetailApiView(mixins.DestroyModelMixin,
     lookup_field = 'id'
 
     def get_queryset(self, *args, **kwargs):
-        return PaymentItem.objects.all()
+        return PaymentItem.objects.all().order_by('id')
 
-    def post(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         return self.update(self, request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
@@ -315,11 +315,24 @@ class PaymentItemDetailApiView(mixins.DestroyModelMixin,
         serializer = self.get_serializer(data=request.data)
 
         if serializer.is_valid(raise_exception=True):
-            payment_item_id = self.kwargs['id']
+            email = request.user.email
+            payment_item_id = int(self.kwargs['id'])
+            
             payment_item = PaymentItem.objects.get(id=payment_item_id)
+            article_obj = Article.objects.get(id=payment_item.article_id_id)
+
+            user_discount = UserDiscount.objects.filter(email=email)
+            user_discount = user_discount.filter(product_group_id=article_obj.product_group_id_id)
+            if user_discount.exists():
+                user_discount = user_discount[0].value
+            else:    
+                user_discount = 0
 
             payment_item.number_of_pieces = serializer.validated_data.get(
                 'number_of_pieces')
+            payment_item.article_price = article_obj.price
+            payment_item.user_discount = user_discount
+
             payment_item.save()
 
             return super().get(request, *args, **kwargs)

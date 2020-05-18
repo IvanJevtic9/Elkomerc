@@ -10,7 +10,7 @@ from account.models import Stars, Comments, UserDiscount
 
 import mercantile
 import os
-
+import math
 
 class ProducerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -336,8 +336,10 @@ class PaymentItemDetailSerializer(serializers.ModelSerializer):
         email = self.context.get('request').user.email
         data = self.context.get('request').data
 
-        payment_order_id = data.get('payment_order_id')
-        payment_order = PaymentOrder.objects.get(id=payment_order_id)
+        id = int(self.context.get('request').parser_context.get('kwargs').get('id'))
+        payment_item = PaymentItem.objects.get(id=id)
+        payment_order_id = payment_item.payment_order_id
+        payment_order = PaymentOrder.objects.get(id=payment_order_id.id)
 
         if payment_order.email_id != email:
             raise serializers.ValidationError(
@@ -346,6 +348,8 @@ class PaymentItemDetailSerializer(serializers.ModelSerializer):
         if payment_order.status in ["RE", "SS", "PD"]:
             raise serializers.ValidationError(
                 {'payment_order_id': _("#ORDER_STATUS_ERROR")}) 
+        
+        return data
 
 class PaymentItemListSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField(read_only=True)
@@ -423,6 +427,7 @@ class PaymentItemListSerializer(serializers.ModelSerializer):
 
 class PaymentOrderListSerializer(serializers.ModelSerializer):
     items = PaymentItemDetailSerializer(read_only=True, many=True)
+    total_cost = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = PaymentOrder
         fields = [
@@ -431,6 +436,16 @@ class PaymentOrderListSerializer(serializers.ModelSerializer):
             'items',
             'time_created',
             'method_of_payment',
+            'total_cost',
             'status'
         ]
         read_only_fields = ['email','time_created','status']
+    
+    def get_total_cost(self, obj):
+        items = PaymentItem.objects.filter(payment_order_id=obj.id)
+        total_sum = 0
+
+        for item in items:
+            total_sum = total_sum + ( item.article_price - (item.user_discount * item.article_price/100) ) * item.number_of_pieces
+
+        return math.ceil(total_sum)    

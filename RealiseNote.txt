@@ -38,11 +38,11 @@
    
 
     #D:\source\DjangoRepos\Elkomerc docs\article_images 
-
+------------------------------------------------------------------
    #TODO list
    1. Srediti Producer-e , izbrisati tabelu ProducerImages . Svaki producer ce imati samo jednu sliku ...  DONE
    2. Pronaci sve logoe za firmu i ubaciti DONE
-   3. Treba napraviti tabele za:
+   3. Treba napraviti tabele za: DONE
       *api-ji:
       - listwish detail, list (dodavanje , brisanje) ...
       - like  detail, list (dodavanje , brisanje ) ...
@@ -76,8 +76,18 @@ Stars - serializer
       - like  detail, list (dodavanje , brisanje ) ...
       - rabati samo izlistavanje ...
       - paymentOrder dodavanje , izlistivanje , brisanje , izmena ..
+----------------------------------------------------------------------
 
-
+Realise 19.05.2020
 # Payment Order api documentation:
    * Payment item detail api:
-      -
+      - [PUT] Sluzi za azuriranje payment itema , number_of_pieces opcija
+      - [GET] Vraca item
+   * Payment item list view:
+      - [GET] metod vraca sve iteme vezani za usera
+      - [PUT] Kreiranje payment itema param
+   * Payment order list api:
+      - [POST] Za kreiranje order-a 
+      - [GET] Vraca sve payment ordere vezane za usera
+
+Payment order flow : TODO       

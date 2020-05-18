@@ -3,10 +3,10 @@ from rest_framework.reverse import reverse as api_reverse
 
 from django.utils.translation import ugettext_lazy as _
 
-from product.models import Attribute, Article, ArticleImage, Producer, ProductGroup
+from product.models import Attribute, Article, ArticleImage, Producer, ProductGroup, PaymentItem, PaymentOrder
 from product_category.models import Category, SubCategory
 
-from account.models import Stars, Comments
+from account.models import Stars, Comments, UserDiscount
 
 import mercantile
 import os
@@ -294,3 +294,37 @@ class ProducerImagesImportSerializer(serializers.ModelSerializer):
 
     def validate_exel_file(self, value):
         return value
+
+class PaymentItemDetailSerializer(serializers.ModelSerializer):
+    article_code = serializers.SerializerMethodField(read_only=True)
+    article_name = serializers.SerializerMethodField(read_only=True)
+    unit_of_measure = serializers.SerializerMethodField(read_only=True)
+    price = serializers.SerializerMethodField(read_only=True)
+    class Meta:
+        model = PaymentItem
+        fields = [
+            'id',
+            'article_id',
+            'payment_order_id',
+            'article_code',
+            'article_name',
+            'number_of_pieces',
+            'unit_of_measure',
+            'user_discount',
+            'article_price',
+            'price'
+        ]
+        read_only_fields = ['payment_order_id','article_id','user_discount','article_price']
+
+    def get_article_code(self, obj):    
+        return obj.article_id.article_code
+
+    def get_article_name(self, obj):
+        return obj.article_id.article_name    
+
+    def get_unit_of_measure(self, obj):
+        return obj.article_id.get_unit_of_measure_display()
+
+    def get_price(self, obj):
+        return obj.article_price - (obj.user_discount * obj.article_price/100)    
+

@@ -76,3 +76,8 @@ Stars - serializer
       - like  detail, list (dodavanje , brisanje ) ...
       - rabati samo izlistavanje ...
       - paymentOrder dodavanje , izlistivanje , brisanje , izmena ..
+
+
+# Payment Order api documentation:
+   * Payment item detail api:
+      -

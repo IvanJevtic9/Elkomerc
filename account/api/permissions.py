@@ -26,7 +26,10 @@ class IsOwner(permissions.BasePermission):
 
     message = 'You do not have permissions for this request.'
     def has_object_permission(self, request, view, obj):
-        return obj.email_id == request.user.email
+        if hasattr(obj,'email_id'):
+            return obj.email_id == request.user.email
+        elif hasattr(obj.payment_order_id,'email_id'):
+            return obj.payment_order_id.email_id == request.user.email
 
 class AdminAuthenticationPermission(permissions.BasePermission):
 

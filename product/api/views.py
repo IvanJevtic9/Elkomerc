@@ -17,10 +17,11 @@ import sys
 from tablib import Dataset
 import openpyxl
 
-from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer
-from product.models import Article, Producer, Attribute, ArticleImage
+from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer
+from product.models import Article, Producer, Attribute, ArticleImage, PaymentItem, PaymentOrder
 
-from account.api.permissions import AdminAuthenticationPermission
+from account.api.permissions import AdminAuthenticationPermission, IsOwner
+
 
 class ArticleListApiView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -98,7 +99,8 @@ class ArticleImportApiView(generics.CreateAPIView):
             sheet_name = wb.active.title
             excel_sheet = wb.get_sheet_by_name(sheet_name)
             if excel_sheet.max_column is not 6:
-                JsonResponse({"message": "Excel file is not valid."}, status=401)
+                JsonResponse(
+                    {"message": "Excel file is not valid."}, status=401)
 
             excel_sheet.insert_rows(0)
             excel_sheet['A1'].value = 'PRODUCT_GROUP'
@@ -112,18 +114,20 @@ class ArticleImportApiView(generics.CreateAPIView):
 
             dataset = Dataset()
             imported_data = dataset.load(request.FILES[file_import.field_name])
-            
+
             for art in imported_data.dict:
                 try:
-                    art_obj = Article.objects.get(article_code=art['ARTICLE_CODE'])
+                    art_obj = Article.objects.get(
+                        article_code=art['ARTICLE_CODE'])
                     art_obj.price = art['SELL_PRICE']
                     if art_obj.price == 0:
                         art_obj.is_available = False
                     art_obj.save()
                 except Article.DoesNotExist:
                     pass
-            
+
             return JsonResponse({"message": "File has been imported successfully."}, status=200)
+
 
 class ProducerImagesImportApiView(generics.CreateAPIView):
     permission_classes = [AdminAuthenticationPermission]
@@ -142,10 +146,11 @@ class ProducerImagesImportApiView(generics.CreateAPIView):
 
         if serializer.is_valid(raise_exception=True):
             exel_file_import = serializer.validated_data.get('exel_file')
-            path = serializer.validated_data.get('directory_path')              
+            path = serializer.validated_data.get('directory_path')
 
             dataset = Dataset()
-            imported_data = dataset.load(request.FILES[exel_file_import.field_name])
+            imported_data = dataset.load(
+                request.FILES[exel_file_import.field_name])
             for prod in imported_data.dict:
                 image_file = Image.open(path+prod['image_name'])
                 split_name = image_file.filename.split('\\')
@@ -156,28 +161,32 @@ class ProducerImagesImportApiView(generics.CreateAPIView):
 
                     per = h_p if h_p > w_p else w_p
 
-                    image_file = image_file.resize((int(per*image_file.height),int(per*image_file.width)),Image.ANTIALIAS)
+                    image_file = image_file.resize(
+                        (int(per*image_file.height), int(per*image_file.width)), Image.ANTIALIAS)
 
                 if image_file.format is None:
                     image_format = split_name[len(split_name)-1].split('.')[1]
                     image_file.format = 'PNG' if image_format == 'png' else 'JPEG'
-                
+
                 image_file.filename = split_name[len(split_name)-1]
 
                 buffer = BytesIO()
                 image_file.save(buffer, format=image_file.format, quality=100)
                 buffer.seek(0)
-                image_django_file = InMemoryUploadedFile(buffer, image_file.filename, split_name[len(split_name)-1], 'image/jpeg', buffer.tell(), None)
-                
+                image_django_file = InMemoryUploadedFile(buffer, image_file.filename, split_name[len(
+                    split_name)-1], 'image/jpeg', buffer.tell(), None)
+
                 try:
                     producer_obj = Producer.objects.get(id=prod['producer_id'])
                     producer_obj.profile_image.delete(save=False)
 
-                    producer_obj.profile_image.save(image_django_file.name,image_django_file)
+                    producer_obj.profile_image.save(
+                        image_django_file.name, image_django_file)
                     producer_obj.save()
                 except Producer.DoesNotExist:
                     pass
-            return JsonResponse({"message": "Images have been imported sucessfully."}, status=200)        
+            return JsonResponse({"message": "Images have been imported sucessfully."}, status=200)
+
 
 class ArticleImagesImportApiView(generics.CreateAPIView):
     permission_classes = [AdminAuthenticationPermission]
@@ -186,7 +195,7 @@ class ArticleImagesImportApiView(generics.CreateAPIView):
 
     def get_serializer_class(self):
         return ArticleImagesImportSerializer
-        
+
     def post(self, request, *args, **kwargs):
         return self.create(self, request, *args, **kwargs)
 
@@ -199,26 +208,30 @@ class ArticleImagesImportApiView(generics.CreateAPIView):
             path = serializer.validated_data.get('directory_path')
 
             dataset = Dataset()
-            imported_data = dataset.load(request.FILES[exel_file_import.field_name])
-            
+            imported_data = dataset.load(
+                request.FILES[exel_file_import.field_name])
+
             for art in imported_data.dict:
-                #Convert PIL image to django file upload
+                # Convert PIL image to django file upload
                 image_file = Image.open(path+art['image_name'])
                 split_name = image_file.filename.split('\\')
                 image_file.filename = split_name[len(split_name)-1]
-                
+
                 buffer = BytesIO()
                 image_file.save(buffer, format=image_file.format, quality=100)
                 buffer.seek(0)
-                image_django_file = InMemoryUploadedFile(buffer, image_file.filename, split_name[len(split_name)-1], 'image/jpeg', buffer.tell(), None)
-                
+                image_django_file = InMemoryUploadedFile(buffer, image_file.filename, split_name[len(
+                    split_name)-1], 'image/jpeg', buffer.tell(), None)
+
                 try:
                     article_image = ArticleImage.objects.get(id=art['id'])
-                    article_image.image_name = split_name[len(split_name)-1][0:29] if len(split_name[len(split_name)-1]) > 30 else split_name[len(split_name)-1]
+                    article_image.image_name = split_name[len(split_name)-1][0:29] if len(
+                        split_name[len(split_name)-1]) > 30 else split_name[len(split_name)-1]
                     try:
                         article_obj = Article.objects.get(id=art['article_id'])
                     except Article.DoesNotExist:
-                        JsonResponse({"message": "Article with provided id: "+ str(art['article_id']) + "does not exist."}, status=200)
+                        JsonResponse({"message": "Article with provided id: " +
+                                      str(art['article_id']) + "does not exist."}, status=200)
 
                     article_image.article_id = article_obj
                     article_image.content_type = image_file.format
@@ -228,21 +241,26 @@ class ArticleImagesImportApiView(generics.CreateAPIView):
                     article_image.purpose = art['purpose']
 
                     article_image.image.delete(save=False)
-                    
-                    article_image.image.save(image_django_file.name,image_django_file)
+
+                    article_image.image.save(
+                        image_django_file.name, image_django_file)
                     article_image.save()
                 except ArticleImage.DoesNotExist:
                     try:
                         article_obj = Article.objects.get(id=art['article_id'])
                     except Article.DoesNotExist:
-                        JsonResponse({"message": "Article with provided id: "+ str(art['article_id']) + "does not exist."}, status=200)
+                        JsonResponse({"message": "Article with provided id: " +
+                                      str(art['article_id']) + "does not exist."}, status=200)
 
-                    image_name = split_name[len(split_name)-1][0:29] if len(split_name[len(split_name)-1]) > 30 else split_name[len(split_name)-1]
-                    article_image = ArticleImage(id=art['id'],image=image_django_file,image_name=image_name,article_id=article_obj,content_type=image_file.format,size=image_file.decodermaxblock,height=image_file.height,width=image_file.width,purpose=art['purpose'])
+                    image_name = split_name[len(split_name)-1][0:29] if len(
+                        split_name[len(split_name)-1]) > 30 else split_name[len(split_name)-1]
+                    article_image = ArticleImage(id=art['id'], image=image_django_file, image_name=image_name, article_id=article_obj, content_type=image_file.format,
+                                                 size=image_file.decodermaxblock, height=image_file.height, width=image_file.width, purpose=art['purpose'])
 
                     article_image.save()
 
             return JsonResponse({"message": "Images have been imported sucessfully."}, status=200)
+
 
 class ArticleDetailApiView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -251,6 +269,7 @@ class ArticleDetailApiView(generics.RetrieveAPIView):
 
     def get_queryset(self, *args, **kwargs):
         return Article.objects.all()
+
 
 class ProducerDetailApiView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -271,3 +290,34 @@ class ProducerListApiView(generics.ListAPIView):
 
     def get_serializer_context(self):
         return {'request': self.request}
+
+
+class PaymentItemDetailApiView(mixins.DestroyModelMixin,
+                              mixins.UpdateModelMixin,
+                              generics.RetrieveAPIView):
+    permission_classes = [IsOwner]
+    serializer_class = PaymentItemDetailSerializer
+    pagination_class = None
+    lookup_field = 'id'
+    
+    def get_queryset(self, *args, **kwargs):
+        return PaymentItem.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        return self.update(self, request, *args, **kwargs)    
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            payment_item_id = self.kwargs['id']
+            payment_item = PaymentItem.objects.get(id=payment_item_id)
+
+            payment_item.number_of_pieces = serializer.validated_data.get('number_of_pieces', None)
+            payment_item.save()
+
+            return super().get(request, *args, **kwargs)

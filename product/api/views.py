@@ -21,11 +21,11 @@ from .serializers import ArticleDetailSerializer, ArticleListSerializer, Produce
 from product.models import Article, Producer, Attribute, ArticleImage, PaymentItem, PaymentOrder
 from account.models import UserDiscount
 
-from account.api.permissions import AdminAuthenticationPermission, IsOwner
+from account.api.permissions import IsOwner
 
 
 class ArticleListApiView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, ]
     serializer_class = ArticleListSerializer
 
     def get_queryset(self, *args, **kwargs):
@@ -79,7 +79,7 @@ class ArticleListApiView(generics.ListAPIView):
 
 
 class ArticleImportApiView(generics.CreateAPIView):
-    permission_classes = [AdminAuthenticationPermission]
+    permission_classes = [permissions.IsAdminUser, ]
     serializer_class = ArticleImportSerializer
     queryset = Article.objects.all()
 
@@ -131,7 +131,7 @@ class ArticleImportApiView(generics.CreateAPIView):
 
 
 class ProducerImagesImportApiView(generics.CreateAPIView):
-    permission_classes = [AdminAuthenticationPermission]
+    permission_classes = [permissions.IsAdminUser, ]
     serializer_class = ProducerImagesImportSerializer
     queryset = Producer.objects.all()
 
@@ -190,7 +190,7 @@ class ProducerImagesImportApiView(generics.CreateAPIView):
 
 
 class ArticleImagesImportApiView(generics.CreateAPIView):
-    permission_classes = [AdminAuthenticationPermission]
+    permission_classes = [permissions.IsAdminUser, ]
     serializer_class = ArticleImagesImportSerializer
     queryset = ArticleImage.objects.all()
 
@@ -264,7 +264,7 @@ class ArticleImagesImportApiView(generics.CreateAPIView):
 
 
 class ArticleDetailApiView(generics.RetrieveAPIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, ]
     serializer_class = ArticleDetailSerializer
     lookup_field = 'id'
 
@@ -273,7 +273,7 @@ class ArticleDetailApiView(generics.RetrieveAPIView):
 
 
 class ProducerDetailApiView(generics.RetrieveAPIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, ]
     serializer_class = ProducerSerializer
     lookup_field = 'id'
 
@@ -282,7 +282,7 @@ class ProducerDetailApiView(generics.RetrieveAPIView):
 
 
 class ProducerListApiView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, ]
     serializer_class = ProducerListSerializer
     pagination_class = None
 
@@ -296,7 +296,7 @@ class ProducerListApiView(generics.ListAPIView):
 class PaymentItemDetailApiView(mixins.DestroyModelMixin,
                                mixins.UpdateModelMixin,
                                generics.RetrieveAPIView):
-    permission_classes = [IsOwner]
+    permission_classes = [IsOwner, ]
     serializer_class = PaymentItemDetailSerializer
     pagination_class = None
     lookup_field = 'id'
@@ -305,9 +305,11 @@ class PaymentItemDetailApiView(mixins.DestroyModelMixin,
         return PaymentItem.objects.all().order_by('id')
 
     def put(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
         return self.update(self, request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
         return self.destroy(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
@@ -340,7 +342,7 @@ class PaymentItemDetailApiView(mixins.DestroyModelMixin,
 
 class PaymentItemCreateApiView(generics.CreateAPIView,
                                generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ]
     serializer_class = PaymentItemListSerializer
 
     def get_queryset(self, *args, **kwargs):
@@ -385,13 +387,14 @@ class PaymentItemCreateApiView(generics.CreateAPIView,
             return super().get(request, *args, **kwargs)
 
 class PaymentOrderListApiView(generics.CreateAPIView, generics.ListAPIView):
-    permission_classes = [IsOwner]
+    permission_classes = [IsOwner, ]
     serializer_class = PaymentOrderListSerializer
 
     def get_queryset(self, *args, **kwargs):
         return  PaymentOrder.objects.filter(email=self.request.user.email).order_by('id')
 
     def post(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
         return self.create(self, request, *args, **kwargs)
 
             

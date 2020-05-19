@@ -418,7 +418,7 @@ class WishListDetailSerializer(serializers.ModelSerializer):
             'email',
             'article_id'
         ]
-
+        read_only_fields = ['email']
 
 class StarsListSerializer(serializers.ModelSerializer):
     uri = serializers.SerializerMethodField(read_only=True)

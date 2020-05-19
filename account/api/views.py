@@ -23,7 +23,7 @@ from .serializers import AccountRegisterSerializer, AccountListSerializer, Accou
 from account.models import Account, Company, User, PostCode, WishList, Stars, Comments
 from product.models import Article
 
-from .permissions import AnonPermissionOnly, IsOwnerOrReadOnly, IsOwner
+from .permissions import AnonPermissionOnly, IsOwner, IsOwner
 from account.tasks import send_email, remove_unactive_accounts
 
 jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
@@ -228,7 +228,7 @@ class AccountDetailApiView(
     mixins.DestroyModelMixin,
     generics.RetrieveAPIView
 ):
-    permission_classes = [IsOwnerOrReadOnly, ]
+    permission_classes = [IsOwner, ]
     serializer_class = AccountDetailSerializer
     lookup_field = 'id'
 
@@ -239,17 +239,18 @@ class AccountDetailApiView(
         return AccountDetailSerializer
 
     def put(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
         return self.update(request, *args, **kwargs)
 
     def patch(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
         return self.patch(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
         return self.destroy(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.save()
         serializer = self.get_serializer(data=request.data)
 
         if serializer.is_valid(raise_exception=True):
@@ -318,7 +319,7 @@ class AccountChangePassword(
     mixins.UpdateModelMixin,
     generics.RetrieveAPIView
 ):
-    permission_classes = [IsOwnerOrReadOnly, ]
+    permission_classes = [IsOwner, ]
     serializer_class = AccountChangePasswordSerializer
     lookup_field = 'id'
 
@@ -329,6 +330,7 @@ class AccountChangePassword(
         return AccountChangePasswordSerializer
 
     def put(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
         return self.update(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
@@ -367,7 +369,7 @@ class PostCodeListView(generics.ListAPIView):
         return queryset_list
 
 class WishlistListApiView(generics.ListAPIView):
-    permission_classes = [IsOwnerOrReadOnly, ]
+    permission_classes = [permissions.IsAuthenticated , ]
     serializer_class = WishlistListSerializer
     pagination_class = None
 
@@ -404,10 +406,11 @@ class WishlistDetailApiView(mixins.DestroyModelMixin,
         return WishList.objects.all()
 
     def delete(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
         return self.destroy(request, *args, **kwargs)
 
 class StarsListApiView(generics.ListAPIView, generics.CreateAPIView):
-    permission_classes = [IsOwnerOrReadOnly, ]
+    permission_classes = [permissions.IsAuthenticated , ]
     serializer_class = StarsListSerializer
     pagination_class = None
 
@@ -445,10 +448,12 @@ class StarsDetailApiView(mixins.DestroyModelMixin,
     def get_queryset(self, *args, **kwargs):
         return Stars.objects.all()
 
-    def post(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
         return self.update(self, request, *args, **kwargs)    
 
     def delete(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
         return self.destroy(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
@@ -515,10 +520,12 @@ class CommentsDetailApiView(mixins.DestroyModelMixin,
     def get_queryset(self, *args, **kwargs):
         return Comments.objects.all()
 
-    def post(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
         return self.update(self, request, *args, **kwargs)    
 
     def delete(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
         return self.destroy(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):

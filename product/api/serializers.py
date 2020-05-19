@@ -6,7 +6,7 @@ from django.utils.translation import ugettext_lazy as _
 from product.models import Attribute, Article, ArticleImage, Producer, ProductGroup, PaymentItem, PaymentOrder
 from product_category.models import Category, SubCategory
 
-from account.models import Stars, Comments, UserDiscount
+from account.models import Stars, Comments, UserDiscount, User, Company, Account
 
 import mercantile
 import os
@@ -58,7 +58,6 @@ class ProducerInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producer
         fields = [
-            'id',
             'producer_name',
             'uri',
             'profile_image'
@@ -67,15 +66,6 @@ class ProducerInfoSerializer(serializers.ModelSerializer):
     def get_uri(self, obj):
         request = self.context.get('request')
         return api_reverse("product:detail", kwargs={"id": obj.id}, request=request)
-
-
-class ProductGroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductGroup
-        fields = [
-            'id',
-            'group_name'
-        ]
 
 
 class ArticleListSerializer(serializers.ModelSerializer):
@@ -126,19 +116,21 @@ class ArticleListSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return api_reverse("product:article", kwargs={"id": obj.id}, request=request)
 
+    def get_user_discount(self, obj):
+        email = self.context.get('request').user.email
+        qs = UserDiscount.objects.filter(email=email)
+        return qs.filter(product_group_id=obj.product_group_id_id)[0].value
 
 class ArticleDetailSerializer(serializers.ModelSerializer):
     producer_info = ProducerInfoSerializer(
         source='producer_id', read_only=True)
-    discount_group = ProductGroupSerializer(
-        source='product_group_id', read_only=True)
+    user_discount = serializers.SerializerMethodField(read_only=True)
+    user_price = serializers.SerializerMethodField(read_only=True)
     article_images = serializers.SerializerMethodField(read_only=True)
-    currency = serializers.SerializerMethodField(read_only=True)
     attributes = serializers.SerializerMethodField(read_only=True)
-    category = serializers.SerializerMethodField(read_only=True)
     unit_of_measure = serializers.SerializerMethodField(read_only=True)
     number_of_rates = serializers.SerializerMethodField(read_only=True)
-    avg_rate = serializers.SerializerMethodField(read_only=True)
+    article_rate = serializers.SerializerMethodField(read_only=True)
     comments = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -148,21 +140,20 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
             'article_code',
             'article_name',
             'producer_info',
-            'category',
             'attributes',
             'article_images',
-            'discount_group',
             'description',
             'unit_of_measure',
+            'user_discount',
             'price',
-            'currency',
+            'user_price',
             'number_of_rates',
-            'avg_rate',
+            'article_rate',
             'comments',
             'is_available'
         ]
 
-    def get_avg_rate(self, obj):
+    def get_article_rate(self, obj):
         rate_sum = 0
         qs = Stars.objects.filter(article_id=obj.id)
 
@@ -177,27 +168,29 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
     def get_number_of_rates(self, obj):
         return len(Stars.objects.filter(article_id=obj.id))
 
-    def get_program_info(self, obj):
-        request = self.context.get('request')
-        program_info = {}
-        if(obj.program_id is not None):
-            program_info = {
-                "program_id": obj.program_id.id,
-                "program_name": obj.program_id.program_name,
-                "producer_uri": api_reverse("product:detail", kwargs={"id": obj.program_id.producer_id.id}, request=request)
-            }
-
-        return program_info
-
     def get_comments(self, obj):
         comments = []
         qs = Comments.objects.filter(article_id=obj.id)
         for q in qs:
+            qs = User.objects.filter(email=q.email_id)
+            if qs.exists():
+                user = qs[0].__str__()   
+            else:
+                cmp_obj = Company.objects.get(email=q.email_id)
+                user = cmp_obj.__str__()
+
+            acc_obj = Account.objects.get(email=q.email_id)
+            host = self.context.get('request')._request._current_scheme_host
+            if not acc_obj.profile_image:
+                profile_image = None
+            else:
+                profile_image = host + acc_obj.profile_image.url 
+
             obj = {
                 "comment_id": q.id,
-                "email": q.email.email,
+                "user": user,
+                "profile_image": profile_image,
                 "comment": q.comment,
-                "time_created": q.time_created,
                 "last_modified": q.last_modified
             }
             comments.append(obj)
@@ -212,17 +205,11 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
         for img in list_img:
             obj_img = {
                 "uri": host+img.image.url,
-                "purpose": img.purpose,
-                "content_type": img.content_type,
-                "height": img.height,
-                "width": img.width
+                "purpose": img.purpose
             }
             article_images.append(obj_img)
 
         return article_images
-
-    def get_currency(self, obj):
-        return obj.get_currency_display()
 
     def get_attributes(self, obj):
         attributes = []
@@ -230,7 +217,6 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
 
         for l in list_att:
             obj_att = {
-                "attribute_id": l.id,
                 "attribute_name": l.feature_id.feature_name,
                 "value": l.value,
                 "is_selectable": l.feature_id.is_selectable
@@ -239,15 +225,21 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
 
         return attributes
 
-    def get_category(self, obj):
-        category = {
-            "category_id": obj.sub_category_id.category_id.id,
-            "category_name": obj.sub_category_id.category_id.category_name,
-            "sub_category_id": obj.sub_category_id.id,
-            "sub_category_name": obj.sub_category_id.sub_category_name
-        }
+    def get_user_discount(self, obj):
+        if self.context.get('request').user.is_anonymous:
+            return None
+        email = self.context.get('request').user.email
+        qs = UserDiscount.objects.filter(email=email)
+        return qs.filter(product_group_id=obj.product_group_id_id)[0].value
 
-        return category
+    def get_user_price(self, obj):
+        if self.context.get('request').user.is_anonymous:
+            return obj.price
+        email = self.context.get('request').user.email
+        qs = UserDiscount.objects.filter(email=email)
+        value = qs.filter(product_group_id=obj.product_group_id_id)[0].value
+
+        return obj.price - (obj.price*value/100)
 
     def get_unit_of_measure(self, obj):
         return obj.get_unit_of_measure_display()

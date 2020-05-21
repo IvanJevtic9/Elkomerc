@@ -179,8 +179,20 @@ class CommentsForm(forms.ModelForm):
             'id',
             'email',
             'article_id',
-            'comment'
+            'comment',
+            'parent_comment_id'
         ]
+
+    def clean(self, *args, **kwargs):
+        parent_comment_id = self.data.get('parent_comment_id', None)
+        if parent_comment_id is not None:    
+            parent_comment = Comments.objects.get(id=parent_comment_id)
+
+        article_id = int(self.data.get('article_id', None))
+        if parent_comment.article_id_id != article_id:
+            raise forms.ValidationError(_('Article has to be same as parent comment.'))
+
+        return super().clean(*args, **kwargs)
 
 class UserDiscountForm(forms.ModelForm):
     class Meta: 

@@ -108,10 +108,14 @@ class Comments(models.Model):
     last_modified = models.DateTimeField(auto_now=True)
     comment = models.TextField(max_length=400)
 
+    parent_comment_id = models.ForeignKey('Comments', to_field='id',on_delete=models.CASCADE, related_name='parent_comment',blank=True,null=True)
+
     class Meta:
         verbose_name = "Comment"
         verbose_name_plural = "Comments"
 
+    def __str__(self):
+        return self.comment
 
 class UserDiscount(models.Model):
     email = models.ForeignKey('Account',to_field='email',on_delete=models.CASCADE, related_name='acc_discount')

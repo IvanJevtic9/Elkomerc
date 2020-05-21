@@ -12,6 +12,7 @@ import mercantile
 import os
 import math
 
+
 class ProducerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producer
@@ -72,6 +73,8 @@ class ArticleListSerializer(serializers.ModelSerializer):
     profile_picture = serializers.SerializerMethodField(read_only=True)
     uri = serializers.SerializerMethodField(read_only=True)
     article_rate = serializers.SerializerMethodField(read_only=True)
+    user_discount = serializers.SerializerMethodField(read_only=True)
+    price = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Article
@@ -82,6 +85,7 @@ class ArticleListSerializer(serializers.ModelSerializer):
             'uri',
             'profile_picture',
             'article_rate',
+            'user_discount',
             'price'
         ]
 
@@ -98,6 +102,17 @@ class ArticleListSerializer(serializers.ModelSerializer):
                 break
 
         return profile_image
+
+    def get_user_discount(self, obj):
+        if self.context.get('request').user.is_anonymous:
+            return 0
+        email = self.context.get('request').user.email
+        qs = UserDiscount.objects.filter(email=email)
+
+        return qs.filter(product_group_id=obj.product_group_id_id)[0].value
+
+    def get_price(self, obj):
+        return int(obj.price)
 
     def get_article_rate(self, obj):
         email = None
@@ -116,15 +131,11 @@ class ArticleListSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return api_reverse("product:article", kwargs={"id": obj.id}, request=request)
 
-    def get_user_discount(self, obj):
-        email = self.context.get('request').user.email
-        qs = UserDiscount.objects.filter(email=email)
-        return qs.filter(product_group_id=obj.product_group_id_id)[0].value
-
 class ArticleDetailSerializer(serializers.ModelSerializer):
     producer_info = ProducerInfoSerializer(
         source='producer_id', read_only=True)
     user_discount = serializers.SerializerMethodField(read_only=True)
+    price = serializers.SerializerMethodField(read_only=True)
     user_price = serializers.SerializerMethodField(read_only=True)
     article_images = serializers.SerializerMethodField(read_only=True)
     attributes = serializers.SerializerMethodField(read_only=True)
@@ -165,16 +176,19 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
 
         return None
 
+    def get_price(self, obj):
+        return int(obj.price)
+
     def get_number_of_rates(self, obj):
         return len(Stars.objects.filter(article_id=obj.id))
 
     def get_comments(self, obj):
         comments = []
-        qs = Comments.objects.filter(article_id=obj.id)
+        qs = Comments.objects.filter(article_id=obj.id).order_by('parent_comment_id')
         for q in qs:
             qs = User.objects.filter(email=q.email_id)
             if qs.exists():
-                user = qs[0].__str__()   
+                user = qs[0].__str__()
             else:
                 cmp_obj = Company.objects.get(email=q.email_id)
                 user = cmp_obj.__str__()
@@ -184,16 +198,24 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
             if not acc_obj.profile_image:
                 profile_image = None
             else:
-                profile_image = host + acc_obj.profile_image.url 
+                profile_image = host + acc_obj.profile_image.url
 
             obj = {
-                "comment_id": q.id,
-                "user": user,
-                "profile_image": profile_image,
-                "comment": q.comment,
-                "last_modified": q.last_modified
+                'comment_id': q.id,
+                'user': user,
+                'profile_image': profile_image,
+                'comment': q.comment,
+                'last_modified': q.last_modified,
+                'responses': []
             }
-            comments.append(obj)
+            if q.parent_comment_id_id is None:
+                comments.append(obj)
+            else:
+                index = [i for i,x in enumerate(comments)if q.parent_comment_id_id == x.get('comment_id')]
+                if len(index) != 0:
+                    index = index[0]
+                    obj.pop('responses')
+                    comments[index].get('responses').append(obj)
 
         return comments
 
@@ -227,7 +249,7 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
 
     def get_user_discount(self, obj):
         if self.context.get('request').user.is_anonymous:
-            return None
+            return 0
         email = self.context.get('request').user.email
         qs = UserDiscount.objects.filter(email=email)
         return qs.filter(product_group_id=obj.product_group_id_id)[0].value
@@ -293,6 +315,7 @@ class PaymentItemDetailSerializer(serializers.ModelSerializer):
     article_name = serializers.SerializerMethodField(read_only=True)
     unit_of_measure = serializers.SerializerMethodField(read_only=True)
     price = serializers.SerializerMethodField(read_only=True)
+    article_price = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = PaymentItem
@@ -324,11 +347,15 @@ class PaymentItemDetailSerializer(serializers.ModelSerializer):
     def get_price(self, obj):
         return obj.article_price - (obj.user_discount * obj.article_price/100)
 
+    def get_article_price(self, obj):
+        return int(obj.article_price)
+
     def validate(self, data):
         email = self.context.get('request').user.email
         data = self.context.get('request').data
 
-        id = int(self.context.get('request').parser_context.get('kwargs').get('id'))
+        id = int(self.context.get(
+            'request').parser_context.get('kwargs').get('id'))
         payment_item = PaymentItem.objects.get(id=id)
         payment_order_id = payment_item.payment_order_id
         payment_order = PaymentOrder.objects.get(id=payment_order_id.id)
@@ -339,13 +366,16 @@ class PaymentItemDetailSerializer(serializers.ModelSerializer):
 
         if payment_order.status in ["RE", "SS", "PD"]:
             raise serializers.ValidationError(
-                {'payment_order_id': _("#ORDER_STATUS_ERROR")}) 
-        
+                {'payment_order_id': _("#ORDER_STATUS_ERROR")})
+
         return data
+
 
 class PaymentItemListSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField(read_only=True)
     uri = serializers.SerializerMethodField(read_only=True)
+    article_price = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = PaymentItem
         fields = [
@@ -359,7 +389,7 @@ class PaymentItemListSerializer(serializers.ModelSerializer):
             'price'
         ]
 
-        read_only_fields = ['article_price', 'user_discount', 'reject_comment']
+        read_only_fields = ['user_discount', 'reject_comment']
 
     def get_uri(self, obj):
         request = self.context.get('request')
@@ -367,6 +397,9 @@ class PaymentItemListSerializer(serializers.ModelSerializer):
 
     def get_price(self, obj):
         return obj.article_price - (obj.user_discount * obj.article_price/100)
+
+    def get_article_price(self, obj):
+        return int(obj.article_price)
 
     def validate(self, data):
         email = self.context.get('request').user.email
@@ -417,9 +450,11 @@ class PaymentItemListSerializer(serializers.ModelSerializer):
 
         return data
 
+
 class PaymentOrderListSerializer(serializers.ModelSerializer):
     items = PaymentItemDetailSerializer(read_only=True, many=True)
     total_cost = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = PaymentOrder
         fields = [
@@ -431,13 +466,15 @@ class PaymentOrderListSerializer(serializers.ModelSerializer):
             'total_cost',
             'status'
         ]
-        read_only_fields = ['email','time_created','status']
-    
+        read_only_fields = ['email', 'time_created', 'status']
+
     def get_total_cost(self, obj):
         items = PaymentItem.objects.filter(payment_order_id=obj.id)
         total_sum = 0
 
         for item in items:
-            total_sum = total_sum + ( item.article_price - (item.user_discount * item.article_price/100) ) * item.number_of_pieces
+            total_sum = total_sum + \
+                (item.article_price - (item.user_discount *
+                                       item.article_price/100)) * item.number_of_pieces
 
-        return math.ceil(total_sum)    
+        return math.ceil(total_sum)

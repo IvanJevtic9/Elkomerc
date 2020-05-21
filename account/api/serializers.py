@@ -487,7 +487,8 @@ class CommentsListSerializer(serializers.ModelSerializer):
             'uri',
             'time_created',
             'last_modified',
-            'comment'
+            'comment',
+            'parent_comment_id'
         ]
         read_only_fields = ['email', 'time_created', 'last_modified']
 
@@ -495,6 +496,29 @@ class CommentsListSerializer(serializers.ModelSerializer):
         if len(value) > 400 and len(value) < 1:
             raise serializers.ValidationError(_("LENGTH_ERROR"))
 
+        return value
+
+    def validate_article_id(self, value):
+        if hasattr(value, 'id'):
+            art = value.id
+        else:
+            art = int(value)
+        try:
+            Article.objects.get(id=art)
+        except Article.DoesNotExist:
+            raise serializers.ValidationError(_("ARTICLE_NO_EXIST"))  
+        
+        return value
+
+    def validate_parent_comment_id(self, value):
+        article_id = int(self.context.get('request').data.get('article_id'))
+        parent_comment_id = self.context.get('request').data.get('parent_comment_id')
+
+        if parent_comment_id is not None and parent_comment_id is not '':
+            parent_comment_id = int(parent_comment_id)
+
+        if parent_comment_id is not None and parent_comment_id and parent_comment_id != article_id:
+            raise serializers.ValidationError(_("ARTICLE_HAS_TO_BE_THE_SAME_AS_THE_PARENT_COMMENT"))  
         return value
 
     def get_uri(self, obj):

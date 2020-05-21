@@ -495,16 +495,28 @@ class CommentsListApiView(generics.ListAPIView, generics.CreateAPIView):
         if serializer.is_valid(raise_exception=True):
             email = request.user.email
             article_id = serializer.validated_data.get('article_id', None)
+            parent_comment_id = serializer.validated_data.get('parent_comment_id', None)
             try:
                 article_id = article_id.id
             except AttributeError:
                 article_id = article_id        
+
+            try:
+                parent_comment_id = parent_comment_id.id
+            except AttributeError:
+                parent_comment_id = parent_comment_id
+
             comment = serializer.validated_data.get('comment', None)
 
             article_obj = Article.objects.get(id=article_id)
             account_obj = Account.objects.get(email=email)
 
-            comment_obj = Comments(email=account_obj, article_id=article_obj,comment=comment)
+            if parent_comment_id is not None:
+                parent_comment = Comments.objects.get(id=parent_comment_id)
+            else:
+                parent_comment = None    
+
+            comment_obj = Comments(email=account_obj, article_id=article_obj,comment=comment, parent_comment_id=parent_comment)
             comment_obj.save()
 
             return  super().get(request, *args, **kwargs)

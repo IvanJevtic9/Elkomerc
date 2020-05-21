@@ -16,7 +16,9 @@ class IsOwner(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if hasattr(obj,'email_id'):
             return obj.email_id == request.user.email
-        elif hasattr(obj.payment_order_id,'email_id'):
-            return obj.payment_order_id.email_id == request.user.email
+        elif hasattr(obj,'email'):
+            return obj.email == request.user.email
+        elif hasattr(obj, 'payment_order_id') and hasattr(obj.payment_order_id, 'email_id'):
+            return obj.payment_order_id.email_id == request.user.email    
         else:
             return False

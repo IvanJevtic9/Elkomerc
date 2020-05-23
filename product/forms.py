@@ -3,7 +3,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from .models import Producer, ProductGroup, Attribute, Article, ArticleImage, PaymentItem, PaymentOrder
 
-from account.models import UserDiscount
+from account.models import UserDiscount, Account
 
 class ProducerForm(forms.ModelForm):
     class Meta:
@@ -145,5 +145,7 @@ class PaymentOrderForm(forms.ModelForm):
             'id',
             'email',
             'method_of_payment',
-            'status'
+            'status',
+            'note',
+            'attribute_notes'
         ]

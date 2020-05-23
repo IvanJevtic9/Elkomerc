@@ -34,7 +34,7 @@ class Account(AbstractUser):
     address = models.CharField(max_length=100,blank=True,null=True)
     zip_code = models.CharField(max_length=15)
     city = models.CharField(max_length=50)
-    phone_number = models.CharField(max_length=17, blank=True)
+    phone_number = models.CharField(max_length=17,blank=True,null=True)
     account_type = models.CharField(max_length=3,choices=ACC_TYPE,default='USR')
     profile_image = models.ImageField(blank=True,null=True,upload_to='profile_img/')
 

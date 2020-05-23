@@ -103,22 +103,24 @@ class ArticleImage(models.Model):
 
 
 class PaymentItem(models.Model):
-    article_id = models.ForeignKey('Article', to_field='id', on_delete=models.CASCADE, related_name='item_article')
-    payment_order_id = models.ForeignKey('PaymentOrder',to_field='id', on_delete=models.CASCADE,related_name='items')
+    article_id = models.ForeignKey(
+        'Article', to_field='id', on_delete=models.CASCADE, related_name='item_article')
+    payment_order_id = models.ForeignKey(
+        'PaymentOrder', to_field='id', on_delete=models.CASCADE, related_name='items')
     user_discount = models.PositiveIntegerField(
         default=0, validators=[MinValueValidator(0), MaxValueValidator(100)],)
     article_price = models.DecimalField(max_digits=20, decimal_places=2, validators=[
-                                MinValueValidator(Decimal('0.01'))])
+        MinValueValidator(Decimal('0.01'))])
     number_of_pieces = models.PositiveIntegerField(
         default=1, validators=[MinValueValidator(1)])
-    reject_comment = models.TextField(null=True,blank=True)
+    reject_comment = models.TextField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Payment item"
         verbose_name_plural = "Payment items"
 
     def amount(self):
-        return str(self.number_of_pieces) + ' ' + self.article_id.unit_of_measure    
+        return str(self.number_of_pieces) + ' ' + self.article_id.unit_of_measure
 
 
 class PaymentOrder(models.Model):
@@ -143,14 +145,18 @@ class PaymentOrder(models.Model):
     method_of_payment = models.CharField(
         max_length=2, choices=METHOD_OF_PAYMENT_TYPE, default='PS')
 
+    note = models.TextField(null=True, blank=True, max_length=300)
+    attribute_notes = models.TextField(null=True, blank=True)
+
     def items(self):
-        display_string = " -- " 
+        display_string = " -- "
         for p in PaymentItem.objects.filter(payment_order_id=self.id):
-            display_string = display_string + p.article_id.article_name + ' | ' + str(p.number_of_pieces) + ' ' + \
-                p.article_id.unit_of_measure + ' | ' + str(p.user_discount) + \
-                '% | ' + str(p.article_price) + ' din --\n'
+            display_string = display_string + p.article_id.article_name + ' | ' + \
+                str(p.number_of_pieces) + ' ' + p.article_id.unit_of_measure + ' | ' + \
+                str(p.user_discount) + '% | ' + \
+                str(p.article_price) + ' din --\n'
 
         return display_string
 
     def __str__(self):
-        return self.email.email + ' - ' + str(self.time_created)[0:19]    
+        return self.email.email + ' - ' + str(self.time_created)[0:19]

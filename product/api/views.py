@@ -17,9 +17,9 @@ import sys
 from tablib import Dataset
 import openpyxl
 
-from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer, PaymentItemListSerializer, PaymentOrderListSerializer
+from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer, PaymentItemListSerializer, PaymentOrderListSerializer, PaymentOrderCreateSerializer
 from product.models import Article, Producer, Attribute, ArticleImage, PaymentItem, PaymentOrder
-from account.models import UserDiscount
+from account.models import UserDiscount, Account
 
 from account.api.permissions import IsOwner
 
@@ -397,4 +397,63 @@ class PaymentOrderListApiView(generics.CreateAPIView, generics.ListAPIView):
         self.check_object_permissions(self.request, self.get_object())
         return self.create(self, request, *args, **kwargs)
 
-            
+
+class PaymentOrderCreateApiView(generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, ]
+    serializer_class = PaymentOrderCreateSerializer
+
+    def get_queryset(self, *args, **kwargs):
+        return  PaymentOrder.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)            
+
+    def create(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            method_of_payment = serializer.validated_data.get('method_of_payment')
+            note = serializer.validated_data.get('note')
+            email = self.request.user.email
+            account_obj = Account.objects.get(email=email)
+
+            payment_order = PaymentOrder(email=account_obj,method_of_payment=method_of_payment,note=note)
+            payment_order.attribute_notes = ""
+            payment_order.save()
+
+            items = serializer.validated_data.get('payment_items')
+            throw_error = False
+            for it in items:
+                article_id = it.get('article_id')
+                number_of_pieces = it.get('number_of_pieces')
+
+                qs = PaymentItem.objects.filter(article_id=article_id)
+                qs = qs.filter(payment_order_id=payment_order.id)
+                if qs.exists():
+                    throw_error = True
+
+                article = Article.objects.get(id=article_id)
+                item_attributes = it.get('item_attributes')
+                attribute_item = ""
+                if item_attributes is not None:
+                    for att in item_attributes:
+                        attribute_item = attribute_item + "Ime artikla: {2},Ime atributa: {0},vrednost atributa: {1}\n".format(att.get('attribute_name'),att.get('value'),article.article_name)
+
+                user_discount = UserDiscount.objects.filter(email=email)
+                user_discount = user_discount.filter(product_group_id=article.product_group_id)
+                if user_discount.exists():
+                    user_discount = user_discount[0].value
+                else:    
+                    user_discount = 0
+
+                payment_order.attribute_notes = payment_order.attribute_notes + attribute_item
+                payment_order.save()
+                payment_item = PaymentItem(article_id=article,payment_order_id=payment_order,user_discount=user_discount,article_price=article.price,number_of_pieces=number_of_pieces)
+                payment_item.save()
+
+            if throw_error:
+                payment_order.delete()
+                return JsonResponse({"message": "You have multiple payment items for the same article."}, status=400)
+            else:
+                return JsonResponse({"message": "Payment order has been created."}, status=200) 

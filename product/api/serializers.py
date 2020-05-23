@@ -450,11 +450,10 @@ class PaymentItemListSerializer(serializers.ModelSerializer):
 
         return data
 
-
 class PaymentOrderListSerializer(serializers.ModelSerializer):
     items = PaymentItemDetailSerializer(read_only=True, many=True)
     total_cost = serializers.SerializerMethodField(read_only=True)
-
+    status = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = PaymentOrder
         fields = [
@@ -463,6 +462,8 @@ class PaymentOrderListSerializer(serializers.ModelSerializer):
             'items',
             'time_created',
             'method_of_payment',
+            'note',
+            'attribute_notes',
             'total_cost',
             'status'
         ]
@@ -478,3 +479,44 @@ class PaymentOrderListSerializer(serializers.ModelSerializer):
                                        item.article_price/100)) * item.number_of_pieces
 
         return math.ceil(total_sum)
+
+    def get_status(self, obj):
+        return obj.get_status_display()
+
+class PaymentOrderCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentOrder
+        fields = [
+            'id',
+            'email',
+            'time_created',
+            'method_of_payment',
+            'note',
+            'attribute_notes',
+            'status'
+        ]
+
+        read_only_fields = ['email', 'time_created', 'status']    
+
+    def validate(self, data):
+        data = self.context.get('request').data
+
+        items = data.get('payment_items')
+        for it in items:
+            article_id = it.get('article_id')
+            number_of_pieces = it.get('number_of_pieces')
+
+            if number_of_pieces is None or number_of_pieces is '':
+                raise serializers.ValidationError(
+                    {'number_of_pieces': _("#MUST_BE_GREATER_THEN_ZERO")})
+
+            if int(number_of_pieces) < 1:
+                raise serializers.ValidationError(
+                    {'number_of_pieces': _("#MUST_BE_GREATER_THEN_ZERO")})
+
+            qs = Article.objects.filter(id=article_id)
+            if not qs.exists():
+                raise serializers.ValidationError(
+                    {'article_id': _("Article with id {0} doesn't exist".format(article_id))})
+
+        return data    

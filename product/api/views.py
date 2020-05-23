@@ -319,15 +319,42 @@ class PaymentItemDetailApiView(mixins.DestroyModelMixin,
         if serializer.is_valid(raise_exception=True):
             email = request.user.email
             payment_item_id = int(self.kwargs['id'])
-            
+
             payment_item = PaymentItem.objects.get(id=payment_item_id)
             article_obj = Article.objects.get(id=payment_item.article_id_id)
 
+            payment_order = PaymentOrder.objects.get(
+                id=payment_item.payment_order_id_id)
+            item_attributes = serializer.validated_data.get(
+                'item_attributes')
+            
+            payment_order_attributes_notes = ''
+            lines = payment_order.attribute_notes.split('\n')
+            lines.pop()
+            for ln in lines:
+                if article_obj.article_name in ln:
+                    lines.remove(ln)
+                else:
+                    payment_order_attributes_notes = payment_order_attributes_notes + ln + '\n'
+
+            payment_order.attribute_notes = payment_order_attributes_notes
+
+            attribute_item = ""
+            if item_attributes is not None:
+                for att in item_attributes:
+                    attribute_item = attribute_item + "Ime artikla: {2},Ime atributa: {0},vrednost atributa: {1}\n".format(
+                        att.get('attribute_name'), att.get('value'), article_obj.article_name)
+
+
+            payment_order.attribute_notes = payment_order.attribute_notes + attribute_item
+            payment_order.save()
+
             user_discount = UserDiscount.objects.filter(email=email)
-            user_discount = user_discount.filter(product_group_id=article_obj.product_group_id_id)
+            user_discount = user_discount.filter(
+                product_group_id=article_obj.product_group_id_id)
             if user_discount.exists():
                 user_discount = user_discount[0].value
-            else:    
+            else:
                 user_discount = 0
 
             payment_item.number_of_pieces = serializer.validated_data.get(
@@ -346,7 +373,8 @@ class PaymentItemCreateApiView(generics.CreateAPIView,
     serializer_class = PaymentItemListSerializer
 
     def get_queryset(self, *args, **kwargs):
-        payment_orders = PaymentOrder.objects.filter(email=self.request.user.email).order_by('id')
+        payment_orders = PaymentOrder.objects.filter(
+            email=self.request.user.email).order_by('id')
         items = []
         for po in payment_orders:
             qs = PaymentItem.objects.filter(payment_order_id=po)
@@ -365,33 +393,50 @@ class PaymentItemCreateApiView(generics.CreateAPIView,
             email = request.user.email
 
             article_id = serializer.validated_data.get('article_id')
-            payment_order_id = serializer.validated_data.get('payment_order_id')
-            number_of_pieces = serializer.validated_data.get('number_of_pieces')
+            payment_order_id = serializer.validated_data.get(
+                'payment_order_id')
+            number_of_pieces = serializer.validated_data.get(
+                'number_of_pieces')
 
             payment_order = PaymentOrder.objects.get(id=payment_order_id)
             article_obj = Article.objects.get(id=article_id)
             article_price = article_obj.price
 
-            
+            item_attributes = serializer.validated_data.get(
+                'item_attributes')
+
+            attribute_item = ""
+            if item_attributes is not None:
+                for att in item_attributes:
+                    attribute_item = attribute_item + "Ime artikla: {2},Ime atributa: {0},vrednost atributa: {1}\n".format(
+                        att.get('attribute_name'), att.get('value'), article_obj.article_name)
+
+
+            payment_order.attribute_notes = payment_order.attribute_notes + attribute_item
+            payment_order.save()
+
             user_discount = UserDiscount.objects.filter(email=email)
-            user_discount = user_discount.filter(product_group_id=article_obj.product_group_id)
+            user_discount = user_discount.filter(
+                product_group_id=article_obj.product_group_id)
             if user_discount.exists():
                 user_discount = user_discount[0].value
-            else:    
+            else:
                 user_discount = 0
 
-            payment_item = PaymentItem(article_id=article_obj,payment_order_id=payment_order,user_discount=user_discount,article_price=article_price,number_of_pieces=number_of_pieces)    
-            
+            payment_item = PaymentItem(article_id=article_obj, payment_order_id=payment_order,
+                                       user_discount=user_discount, article_price=article_price, number_of_pieces=number_of_pieces)
+
             payment_item.save()
 
             return super().get(request, *args, **kwargs)
+
 
 class PaymentOrderListApiView(generics.CreateAPIView, generics.ListAPIView):
     permission_classes = [IsOwner, ]
     serializer_class = PaymentOrderListSerializer
 
     def get_queryset(self, *args, **kwargs):
-        return  PaymentOrder.objects.filter(email=self.request.user.email).order_by('id')
+        return PaymentOrder.objects.filter(email=self.request.user.email).order_by('id')
 
     def post(self, request, *args, **kwargs):
         self.check_object_permissions(self.request, self.get_object())
@@ -403,22 +448,28 @@ class PaymentOrderCreateApiView(generics.CreateAPIView):
     serializer_class = PaymentOrderCreateSerializer
 
     def get_queryset(self, *args, **kwargs):
-        return  PaymentOrder.objects.all()
+        return PaymentOrder.objects.all()
 
     def post(self, request, *args, **kwargs):
-        return self.create(self, request, *args, **kwargs)            
+        return self.create(self, request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
         request = request.request
         serializer = self.get_serializer(data=request.data)
 
         if serializer.is_valid(raise_exception=True):
-            method_of_payment = serializer.validated_data.get('method_of_payment')
+            method_of_payment = serializer.validated_data.get(
+                'method_of_payment')
             note = serializer.validated_data.get('note')
             email = self.request.user.email
             account_obj = Account.objects.get(email=email)
 
-            payment_order = PaymentOrder(email=account_obj,method_of_payment=method_of_payment,note=note)
+            address = serializer.validated_data.get('address')
+            city = serializer.validated_data.get('city')
+            zip_code = serializer.validated_data.get('zip_code')
+
+            payment_order = PaymentOrder(email=account_obj, address=address, city=city,
+                                         zip_code=zip_code, method_of_payment=method_of_payment, note=note)
             payment_order.attribute_notes = ""
             payment_order.save()
 
@@ -438,22 +489,25 @@ class PaymentOrderCreateApiView(generics.CreateAPIView):
                 attribute_item = ""
                 if item_attributes is not None:
                     for att in item_attributes:
-                        attribute_item = attribute_item + "Ime artikla: {2},Ime atributa: {0},vrednost atributa: {1}\n".format(att.get('attribute_name'),att.get('value'),article.article_name)
+                        attribute_item = attribute_item + "Ime artikla: {2},Ime atributa: {0},vrednost atributa: {1}\n".format(
+                            att.get('attribute_name'), att.get('value'), article.article_name)
 
                 user_discount = UserDiscount.objects.filter(email=email)
-                user_discount = user_discount.filter(product_group_id=article.product_group_id)
+                user_discount = user_discount.filter(
+                    product_group_id=article.product_group_id)
                 if user_discount.exists():
                     user_discount = user_discount[0].value
-                else:    
+                else:
                     user_discount = 0
 
                 payment_order.attribute_notes = payment_order.attribute_notes + attribute_item
                 payment_order.save()
-                payment_item = PaymentItem(article_id=article,payment_order_id=payment_order,user_discount=user_discount,article_price=article.price,number_of_pieces=number_of_pieces)
+                payment_item = PaymentItem(article_id=article, payment_order_id=payment_order,
+                                           user_discount=user_discount, article_price=article.price, number_of_pieces=number_of_pieces)
                 payment_item.save()
 
             if throw_error:
                 payment_order.delete()
                 return JsonResponse({"message": "You have multiple payment items for the same article."}, status=400)
             else:
-                return JsonResponse({"message": "Payment order has been created."}, status=200) 
+                return JsonResponse({"message": "Payment order has been created."}, status=200)

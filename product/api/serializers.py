@@ -459,6 +459,9 @@ class PaymentOrderListSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'email',
+            'address',
+            'zip_code',
+            'city',
             'items',
             'time_created',
             'method_of_payment',
@@ -489,6 +492,9 @@ class PaymentOrderCreateSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'email',
+            'address',
+            'zip_code',
+            'city',
             'time_created',
             'method_of_payment',
             'note',

@@ -144,8 +144,26 @@ class PaymentOrderForm(forms.ModelForm):
         fields = [
             'id',
             'email',
+            'address',
+            'city',
+            'zip_code',
             'method_of_payment',
             'status',
             'note',
             'attribute_notes'
         ]
+    
+    def save(self, commit=True):
+        payment_order = super().save(commit=False)  
+        account = Account.objects.get(email=payment_order.email_id)
+
+        if payment_order.address == None:
+            payment_order.address = account.address
+        if payment_order.city == None:
+            payment_order.city = account.city
+        if payment_order.zip_code == None:
+            payment_order.zip_code = account.zip_code    
+
+        payment_order.save()
+
+        return payment_order

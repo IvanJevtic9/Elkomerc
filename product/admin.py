@@ -117,19 +117,19 @@ class PaymentItemAdmin(admin.ModelAdmin):
 class PaymentOrderAdmin(admin.ModelAdmin):
     form = PaymentOrderForm
     readonly_fields = ('attribute_notes',)
-    list_display = ('id', 'email', 'note', 'attribute_notes', 'method_of_payment', 'status')
+    list_display = ('id', 'email', 'address', 'zip_code', 'city', 'note', 'attribute_notes', 'method_of_payment', 'status')
     list_filter = ('status',)
     fieldsets = (
-        ("General info", {'fields': ('email', 'note', 'method_of_payment', 'status',)}),
+        ("General info", {'fields': ('email', 'address', 'zip_code', 'city', 'note', 'method_of_payment', 'status',)}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'note', 'method_of_payment', 'status',),
+            'fields': ('email', 'address', 'zip_code', 'city', 'note', 'method_of_payment', 'status',),
         }),
     )
-    search_fields = ('id', 'email__email', 'method_of_payment', 'status',)
-    ordering = ('id', 'email__email', 'note', 'attribute_notes', 'method_of_payment', 'status',) 
+    search_fields = ('id', 'email__email', 'address', 'zip_code', 'city', 'method_of_payment', 'status',)
+    ordering = ('id', 'email__email', 'address', 'zip_code', 'city', 'note', 'attribute_notes', 'method_of_payment', 'status',) 
 
 admin.site.register(Producer, ProducerAdmin)
 admin.site.register(ProductGroup, ProductGroupFormAdmin)

@@ -148,6 +148,11 @@ class PaymentOrder(models.Model):
     note = models.TextField(null=True, blank=True, max_length=300)
     attribute_notes = models.TextField(null=True, blank=True)
 
+    #payer information
+    address = models.CharField(max_length=100,blank=True,null=True)
+    city = models.CharField(max_length=50,blank=True,null=True)
+    zip_code = models.CharField(max_length=15,blank=True,null=True)
+
     def items(self):
         display_string = " -- "
         for p in PaymentItem.objects.filter(payment_order_id=self.id):

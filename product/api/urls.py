@@ -1,5 +1,17 @@
 from django.conf.urls import url, include 
-from .views import ArticleListApiView, ProducerDetailApiView, ProducerListApiView, ArticleImportApiView, ArticleDetailApiView, ArticleImagesImportApiView, ProducerImagesImportApiView, PaymentItemDetailApiView, PaymentItemCreateApiView, PaymentOrderListApiView, PaymentOrderCreateApiView
+from .views import (ArticleListApiView,
+                    ProducerDetailApiView,
+                    ProducerListApiView,
+                    ArticleImportApiView,
+                    ArticleDetailApiView,
+                    ArticleImagesImportApiView,
+                    ProducerImagesImportApiView,
+                    PaymentItemDetailApiView,
+                    PaymentItemCreateApiView,
+                    PaymentOrderListApiView,
+                    PaymentOrderCreateApiView,
+                    PaymentOrderDetailApiView,
+                    PaymentOrderDocumentTransitionApiView)
 
 urlpatterns = [
     url(r'^articles/$', ArticleListApiView.as_view()),
@@ -12,5 +24,7 @@ urlpatterns = [
     url(r'^payments/item/(?P<id>\d+)/$', PaymentItemDetailApiView.as_view(), name='item_detail'),
     url(r'^payments/item/$', PaymentItemCreateApiView.as_view()),
     url(r'^payments/order/$', PaymentOrderListApiView.as_view()),
+    url(r'^payments/order/(?P<id>\d+)/$', PaymentOrderDetailApiView.as_view(), name='order_detail'),
     url(r'^payments/order/create/$', PaymentOrderCreateApiView.as_view()),
+    url(r'^payments/order/transition/$', PaymentOrderDocumentTransitionApiView.as_view()),
 ]

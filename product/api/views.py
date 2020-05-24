@@ -17,7 +17,7 @@ import sys
 from tablib import Dataset
 import openpyxl
 
-from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer, PaymentItemListSerializer, PaymentOrderListSerializer, PaymentOrderCreateSerializer
+from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer, PaymentItemListSerializer, PaymentOrderListSerializer, PaymentOrderDetailSerializer, PaymentOrderCreateSerializer, PaymentOrderDocumentTransitionSerializer
 from product.models import Article, Producer, Attribute, ArticleImage, PaymentItem, PaymentOrder
 from account.models import UserDiscount, Account
 
@@ -436,6 +436,7 @@ class PaymentOrderListApiView(generics.CreateAPIView, generics.ListAPIView):
     serializer_class = PaymentOrderListSerializer
 
     def get_queryset(self, *args, **kwargs):
+        #TODO serch for specific payment order
         return PaymentOrder.objects.filter(email=self.request.user.email).order_by('id')
 
     def post(self, request, *args, **kwargs):
@@ -511,3 +512,68 @@ class PaymentOrderCreateApiView(generics.CreateAPIView):
                 return JsonResponse({"message": "You have multiple payment items for the same article."}, status=400)
             else:
                 return JsonResponse({"message": "Payment order has been created."}, status=200)
+
+class PaymentOrderDetailApiView(mixins.DestroyModelMixin,
+                               mixins.UpdateModelMixin,
+                               generics.RetrieveAPIView):
+    permission_classes = [IsOwner, ]
+    serializer_class = PaymentOrderDetailSerializer
+    pagination_class = None
+    lookup_field = 'id'
+
+    def get_queryset(self, *args, **kwargs):
+        return PaymentOrder.objects.all().order_by('id')
+
+    def put(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
+        return self.update(self, request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
+        if serializer.is_valid(raise_exception=True):
+            return self.destroy(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            address = serializer.validated_data.get('address')
+            zip_code = serializer.validated_data.get('zip_code')
+            city = serializer.validated_data.get('city')
+
+            note = serializer.validated_data.get('note')
+
+            payment_order = PaymentOrder.objects.get(id=self.kwargs['id'])
+            
+            payment_order.address = address
+            payment_order.zip_code = zip_code
+            payment_order.city = city
+            payment_order.note = note
+            payment_order.save()
+
+            return super().get(request, *args, **kwargs)
+
+class PaymentOrderDocumentTransitionApiView(generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, ]
+    serializer_class = PaymentOrderDocumentTransitionSerializer
+
+    def get_queryset(self, *args, **kwargs):
+        return PaymentOrder.objects.all().order_by('id')
+
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            payment_order_id = serializer.validated_data.get('payment_order_id')
+            transit_status = serializer.validated_data.get('transit_status')
+            payment_order = PaymentOrder.objects.get(id=payment_order_id)
+
+            payment_order.status = transit_status
+            payment_order.save()
+
+            return JsonResponse({"message": "Payment order status transition has been complited."}, status=200)

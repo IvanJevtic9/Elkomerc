@@ -91,3 +91,5 @@ Realise 19.05.2020
       - [GET] Vraca sve payment ordere vezane za usera
 
 Payment order flow : TODO       
+
+Mislim da sve vezano za payment order radi , veceras napraviti documentFlow transition.

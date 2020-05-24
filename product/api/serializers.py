@@ -470,7 +470,7 @@ class PaymentOrderListSerializer(serializers.ModelSerializer):
             'total_cost',
             'status'
         ]
-        read_only_fields = ['email', 'time_created', 'status']
+        read_only_fields = ['email', 'time_created', 'status', 'attribute_notes']
 
     def get_total_cost(self, obj):
         items = PaymentItem.objects.filter(payment_order_id=obj.id)
@@ -502,7 +502,7 @@ class PaymentOrderCreateSerializer(serializers.ModelSerializer):
             'status'
         ]
 
-        read_only_fields = ['email', 'time_created', 'status']    
+        read_only_fields = ['email', 'time_created', 'status', 'attribute_notes']    
 
     def validate(self, data):
         data = self.context.get('request').data
@@ -525,4 +525,102 @@ class PaymentOrderCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {'article_id': _("Article with id {0} doesn't exist".format(article_id))})
 
-        return data    
+        return data
+
+
+class PaymentOrderDetailSerializer(serializers.ModelSerializer):
+    items = PaymentItemDetailSerializer(read_only=True, many=True)
+    total_cost = serializers.SerializerMethodField(read_only=True)
+    status = serializers.SerializerMethodField(read_only=True)
+    class Meta:
+        model = PaymentOrder
+        fields = [
+            'id',
+            'email',
+            'address',
+            'zip_code',
+            'city',
+            'items',
+            'time_created',
+            'method_of_payment',
+            'note',
+            'attribute_notes',
+            'total_cost',
+            'status'
+        ]
+
+        read_only_fields = ['email', 'time_created', 'status', 'attribute_notes'] 
+
+    def get_total_cost(self, obj):
+        items = PaymentItem.objects.filter(payment_order_id=obj.id)
+        total_sum = 0
+
+        for item in items:
+            total_sum = total_sum + \
+                (item.article_price - (item.user_discount *
+                                       item.article_price/100)) * item.number_of_pieces
+
+        return math.ceil(total_sum)
+
+    def get_status(self, obj):
+        return obj.get_status_display()
+
+    def validate(self, data):
+        id = self.context.get('request').parser_context.get('kwargs').get('id')
+        payment_order = PaymentOrder.objects.get(id=id)
+        if payment_order.status in ["RE", "SS", "PD"]:
+            raise serializers.ValidationError(
+                    {'status': _("#PAYMENT_ORDER_IN_NOT_VALID_STATUS_FOR_UPDATE")})
+
+        return data
+
+class PaymentOrderDocumentTransitionSerializer(serializers.ModelSerializer):
+    payment_order_id = serializers.IntegerField(required=True)
+    transit_status = serializers.CharField(max_length=2, required=True)
+    class Meta:
+        model = PaymentOrder
+        fields = [
+            'payment_order_id',
+            'status',
+            'transit_status'
+        ]
+
+    def validate_transit_status(self, value):
+        if value not in ["DR","IN","RE","RW","WF","SS","PD"]:
+            raise serializers.ValidationError(_("#UNKNOWN_STATUS_TYPE"))
+        return value
+    
+    def validate_payment_order_id(self,value):
+        try:
+            payment_order = PaymentOrder.objects.get(id=value)
+        except PaymentOrder.DoesNotExist:
+            raise serializers.ValidationError(_('#PAYMENT_ORDER_DOES_NOT_EXIST'))    
+        
+        return value
+
+    def validate(self, data):
+        email = self.context.get('request').user.email
+        is_superuser = self.context.get('request').user.is_superuser
+
+        status = data.get('status')
+        transit_status = data.get('transit_status')
+
+        payment_order = PaymentOrder.objects.get(id=data.get('payment_order_id'))
+
+        if payment_order.email_id != email and not is_superuser:
+            raise serializers.ValidationError({"user":_('#DO_NOT_HAVE_PERMISSION')})   
+    
+        if (status == "DR" and transit_status == "IN"):
+            return data    
+        elif ((status == "IN" and transit_status == "RE" ) or \
+           (status == "IN" and transit_status == "RW" ) or \
+           (status == "IN" and transit_status == "WF" ) or \
+           (status == "WF" and transit_status == "SS" ) or \
+           (status == "SS" and transit_status == "PD" ) or \
+           (status == "RW" and transit_status == "DR" )) and \
+            is_superuser:
+            return data
+        else:
+            raise serializers.ValidationError({"transition":_('#NOT_ALLOWED_TRANSITION')}) 
+
+        return data

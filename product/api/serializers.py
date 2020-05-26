@@ -581,14 +581,8 @@ class PaymentOrderDocumentTransitionSerializer(serializers.ModelSerializer):
         model = PaymentOrder
         fields = [
             'payment_order_id',
-            'status',
             'transit_status'
         ]
-
-    def validate_transit_status(self, value):
-        if value not in ["DR","IN","RE","RW","WF","SS","PD"]:
-            raise serializers.ValidationError(_("#UNKNOWN_STATUS_TYPE"))
-        return value
     
     def validate_payment_order_id(self,value):
         try:
@@ -602,22 +596,22 @@ class PaymentOrderDocumentTransitionSerializer(serializers.ModelSerializer):
         email = self.context.get('request').user.email
         is_superuser = self.context.get('request').user.is_superuser
 
-        status = data.get('status')
         transit_status = data.get('transit_status')
 
         payment_order = PaymentOrder.objects.get(id=data.get('payment_order_id'))
+        status = payment_order.status
 
         if payment_order.email_id != email and not is_superuser:
             raise serializers.ValidationError({"user":_('#DO_NOT_HAVE_PERMISSION')})   
     
-        if (status == "DR" and transit_status == "IN"):
+        if (status == "DR" and transit_status == "IN") or \
+           (status == "RW" and transit_status == "DR" ):
             return data    
         elif ((status == "IN" and transit_status == "RE" ) or \
            (status == "IN" and transit_status == "RW" ) or \
            (status == "IN" and transit_status == "WF" ) or \
            (status == "WF" and transit_status == "SS" ) or \
-           (status == "SS" and transit_status == "PD" ) or \
-           (status == "RW" and transit_status == "DR" )) and \
+           (status == "SS" and transit_status == "PD" )) and \
             is_superuser:
             return data
         else:

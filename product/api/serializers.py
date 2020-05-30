@@ -255,7 +255,9 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
             return 0
         email = self.context.get('request').user.email
         qs = UserDiscount.objects.filter(email=email)
-        return qs.filter(product_group_id=obj.product_group_id_id)[0].value
+        if qs.exists():
+            return qs.filter(product_group_id=obj.product_group_id_id)[0].value
+        return 0
 
     def get_user_price(self, obj):
         if self.context.get('request').user.is_anonymous:

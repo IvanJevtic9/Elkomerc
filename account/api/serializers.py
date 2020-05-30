@@ -488,9 +488,10 @@ class CommentsListSerializer(serializers.ModelSerializer):
             'time_created',
             'last_modified',
             'comment',
-            'parent_comment_id'
+            'parent_comment_id',
+            'approved'
         ]
-        read_only_fields = ['email', 'time_created', 'last_modified']
+        read_only_fields = ['email', 'time_created', 'last_modified','approved']
 
     def validate_comment(self, value):
         if len(value) > 400 and len(value) < 1:
@@ -537,10 +538,11 @@ class CommentsDetailSerializer(serializers.ModelSerializer):
             'article_id',
             'time_created',
             'last_modified',
-            'comment'
+            'comment',
+            'approved'
         ]
-        read_only_fields=['email', 'article_id',
-            'time_created', 'last_modified']
+        read_only_fields=['email', 'article_id', 'comment',
+            'time_created', 'last_modified','approved']
 
     def validate_comment(self, value):
         if len(value) > 400 and len(value) < 1:

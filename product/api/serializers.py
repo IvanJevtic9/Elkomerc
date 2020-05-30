@@ -109,7 +109,9 @@ class ArticleListSerializer(serializers.ModelSerializer):
         email = self.context.get('request').user.email
         qs = UserDiscount.objects.filter(email=email)
 
-        return qs.filter(product_group_id=obj.product_group_id_id)[0].value
+        if qs.exists():
+            return qs.filter(product_group_id=obj.product_group_id_id)[0].value
+        return 0
 
     def get_price(self, obj):
         return int(obj.price)
@@ -185,6 +187,7 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
     def get_comments(self, obj):
         comments = []
         qs = Comments.objects.filter(article_id=obj.id).order_by('parent_comment_id')
+        qs = qs.filter(approved=True)
         for q in qs:
             qs = User.objects.filter(email=q.email_id)
             if qs.exists():

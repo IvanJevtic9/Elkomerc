@@ -109,6 +109,7 @@ class Comments(models.Model):
     comment = models.TextField(max_length=400)
 
     parent_comment_id = models.ForeignKey('Comments', to_field='id',on_delete=models.CASCADE, related_name='parent_comment',blank=True,null=True)
+    approved = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = "Comment"

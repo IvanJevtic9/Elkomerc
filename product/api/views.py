@@ -39,7 +39,8 @@ class ArticleListApiView(generics.ListAPIView):
         category_name = self.request.GET.get('category_name', None)
         sub_category_name = self.request.GET.get('sub_category_name', None)
         producer_query = self.request.GET.get('producer', None)
-
+        
+        attr_queryset = Attribute.objects.all()
         if category_id_query:
             queryset_list = queryset_list.filter(
                 Q(sub_category_id__category_id__in=category_id_query)
@@ -61,7 +62,6 @@ class ArticleListApiView(generics.ListAPIView):
                 Q(producer_id=producer_query)
             ).distinct()
 
-        attr_queryset = Attribute.objects.all()
         if value_query:
             attr_queryset = attr_queryset.filter(
                 Q(value__in=value_query)

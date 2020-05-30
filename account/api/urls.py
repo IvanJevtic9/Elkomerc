@@ -16,7 +16,8 @@ from .views import (
                     StarsListApiView,
                     StarsDetailApiView,
                     CommentsListApiView,
-                    CommentsDetailApiView
+                    CommentsDetailApiView,
+                    AdminCommentApprove
 )
 
 urlpatterns = [
@@ -35,4 +36,5 @@ urlpatterns = [
     url(r'^accounts/stars/(?P<id>\d+)/$', StarsDetailApiView.as_view(), name='stars'),
     url(r'^accounts/comments/$', CommentsListApiView.as_view()),
     url(r'^accounts/comments/(?P<id>\d+)/$', CommentsDetailApiView.as_view(), name='comments'),
+    url(r'^accounts/comments/approve/(?P<id>\d+)/$', AdminCommentApprove.as_view()),
 ]

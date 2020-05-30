@@ -552,3 +552,33 @@ class CommentsDetailApiView(mixins.DestroyModelMixin,
             comment_obj.save()
 
             return super().get(request, *args, **kwargs) 
+
+class AdminCommentApprove(mixins.DestroyModelMixin,
+                         mixins.UpdateModelMixin,
+                         generics.RetrieveAPIView):
+    permission_classes = [permissions.IsAdminUser, ]
+    serializer_class = CommentsDetailSerializer
+    pagination_class = None
+    lookup_field = 'id'
+
+    def get_queryset(self, *args, **kwargs):
+        return Comments.objects.all()
+
+    def put(self, request, *args, **kwargs):
+        return self.update(self, request, *args, **kwargs)    
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            comment_id = self.kwargs['id']
+            comment_obj = Comments.objects.get(id=comment_id)
+
+            comment_obj.approved = True
+            comment_obj.save()
+
+            return super().get(request, *args, **kwargs) 

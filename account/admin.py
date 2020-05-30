@@ -137,20 +137,21 @@ class WishListAdmin(admin.ModelAdmin):
 class CommentsAdmin(admin.ModelAdmin):
     readonly_fields = ('time_created', 'last_modified')
     form = CommentsForm
-    list_display = ('id', 'email', 'article_id', 'comment','time_created', 'last_modified', 'parent_comment_id')
+    list_display = ('id', 'email', 'article_id', 'comment','time_created', 'last_modified', 'parent_comment_id', 'approved')
+    list_filter = ('approved',)
 
     fieldsets = (
-        ("General info", {'fields': ('email', 'article_id', 'comment', 'parent_comment_id')}),
+        ("General info", {'fields': ('email', 'article_id', 'comment', 'parent_comment_id', 'approved')}),
     )
 
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'article_id', 'comment', 'parent_comment_id',  ),
+            'fields': ('email', 'article_id', 'comment', 'parent_comment_id', 'approved', ),
         }),
     )
-    search_fields = ('article_id__article_name', 'email__email', 'comment', 'parent_comment_id__comment')
-    ordering = ('article_id__article_name', 'email', 'comment', 'parent_comment_id__comment')
+    search_fields = ('article_id__article_name', 'email__email', 'comment', 'parent_comment_id__comment','approved')
+    ordering = ('article_id__article_name', 'email', 'comment', 'parent_comment_id__comment', 'approved')
 
 class UserDiscountAdmin(admin.ModelAdmin):
     form = UserDiscountForm

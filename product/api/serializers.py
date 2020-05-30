@@ -107,10 +107,11 @@ class ArticleListSerializer(serializers.ModelSerializer):
         if self.context.get('request').user.is_anonymous:
             return 0
         email = self.context.get('request').user.email
+        
         qs = UserDiscount.objects.filter(email=email)
-
+        qs = qs.filter(product_group_id=obj.product_group_id_id)
         if qs.exists():
-            return qs.filter(product_group_id=obj.product_group_id_id)[0].value
+            return qs[0].value
         return 0
 
     def get_price(self, obj):
@@ -254,18 +255,24 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
         if self.context.get('request').user.is_anonymous:
             return 0
         email = self.context.get('request').user.email
+
         qs = UserDiscount.objects.filter(email=email)
+        qs = qs.filter(product_group_id=obj.product_group_id_id)
         if qs.exists():
-            return qs.filter(product_group_id=obj.product_group_id_id)[0].value
+            return qs[0].value
         return 0
 
     def get_user_price(self, obj):
         if self.context.get('request').user.is_anonymous:
             return obj.price
         email = self.context.get('request').user.email
+        
         qs = UserDiscount.objects.filter(email=email)
-        value = qs.filter(product_group_id=obj.product_group_id_id)[0].value
-
+        qs = qs.filter(product_group_id=obj.product_group_id_id)
+        if qs.exists():
+            value = qs[0].value
+        else:
+            value = 0
         return obj.price - (obj.price*value/100)
 
     def get_unit_of_measure(self, obj):

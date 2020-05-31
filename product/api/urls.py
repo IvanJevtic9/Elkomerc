@@ -11,7 +11,8 @@ from .views import (ArticleListApiView,
                     PaymentOrderListApiView,
                     PaymentOrderCreateApiView,
                     PaymentOrderDetailApiView,
-                    PaymentOrderDocumentTransitionApiView)
+                    PaymentOrderDocumentTransitionApiView,
+                    PaymentItemRejectCommentAdminApiView)
 
 urlpatterns = [
     url(r'^articles/$', ArticleListApiView.as_view()),
@@ -23,6 +24,7 @@ urlpatterns = [
     url(r'^producers/images/import/$', ProducerImagesImportApiView.as_view()),
     url(r'^payments/item/(?P<id>\d+)/$', PaymentItemDetailApiView.as_view(), name='item_detail'),
     url(r'^payments/item/$', PaymentItemCreateApiView.as_view()),
+    url(r'^payments/item/admin-update/(?P<id>\d+)/$', PaymentItemRejectCommentAdminApiView.as_view()),
     url(r'^payments/order/$', PaymentOrderListApiView.as_view()),
     url(r'^payments/order/(?P<id>\d+)/$', PaymentOrderDetailApiView.as_view(), name='order_detail'),
     url(r'^payments/order/create/$', PaymentOrderCreateApiView.as_view()),

@@ -52,9 +52,9 @@ class Article(models.Model):
         ('EUR', 'Euro')
     )
     MEASURE_TYPE = (
-        ("M", "Meter"),
+        ("M", "Metar"),
         ("K", "Kilogram"),
-        ("P", "Piece")
+        ("P", "Komada")
     )
 
     article_code = models.CharField(max_length=15, unique=True)
@@ -125,13 +125,13 @@ class PaymentItem(models.Model):
 
 class PaymentOrder(models.Model):
     STATUS_TYPE = (
-        ("DR", "Draft"),
-        ("IN", "In the processing"),
-        ("RE", "Rejected"),
-        ("RW", "Rejected with counter offer"),
-        ("WF", "Waiting for payment"),
-        ("SS", "Shipment sent"),
-        ("PD", "Products delivered"),
+        ("DR", "U izradi"),
+        ("IN", "U obradi"),
+        ("RE", "Odbijeno"),
+        ("RW", "Odbijeno sa kontra ponudom"),
+        ("WF", "Čekanje na uplatu"),
+        ("SS", "Porudzbina poslata"),
+        ("PD", "Porudzbina isporučena"),
     )
 
     METHOD_OF_PAYMENT_TYPE = (

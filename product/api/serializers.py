@@ -75,6 +75,7 @@ class ArticleListSerializer(serializers.ModelSerializer):
     article_rate = serializers.SerializerMethodField(read_only=True)
     user_discount = serializers.SerializerMethodField(read_only=True)
     price = serializers.SerializerMethodField(read_only=True)
+    avg_rate = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Article
@@ -85,6 +86,7 @@ class ArticleListSerializer(serializers.ModelSerializer):
             'uri',
             'profile_picture',
             'article_rate',
+            'avg_rate',
             'user_discount',
             'price'
         ]
@@ -102,6 +104,18 @@ class ArticleListSerializer(serializers.ModelSerializer):
                 break
 
         return profile_image
+
+    def get_avg_rate(self, obj):
+        rate_sum = 0
+        qs = Stars.objects.filter(article_id=obj.id)
+
+        if qs.exists():
+            for q in qs:
+                rate_sum = rate_sum + q.value
+
+            return rate_sum/len(qs)
+
+        return None
 
     def get_user_discount(self, obj):
         if self.context.get('request').user.is_anonymous:
@@ -144,6 +158,7 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
     attributes = serializers.SerializerMethodField(read_only=True)
     unit_of_measure = serializers.SerializerMethodField(read_only=True)
     number_of_rates = serializers.SerializerMethodField(read_only=True)
+    avg_rate = serializers.SerializerMethodField(read_only=True)
     article_rate = serializers.SerializerMethodField(read_only=True)
     comments = serializers.SerializerMethodField(read_only=True)
 
@@ -162,12 +177,26 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
             'price',
             'user_price',
             'number_of_rates',
+            'avg_rate',
             'article_rate',
             'comments',
             'is_available'
         ]
 
     def get_article_rate(self, obj):
+        email = None
+        if self.context.get('request').user.id is not None:
+            email = self.context.get('request').user.email
+
+        qs = Stars.objects.filter(email=email)
+        qs = qs.filter(article_id=obj.id)
+
+        if qs.exists():
+            return qs[0].value
+        else:
+            return None
+
+    def get_avg_rate(self, obj):
         rate_sum = 0
         qs = Stars.objects.filter(article_id=obj.id)
 
@@ -334,7 +363,6 @@ class PaymentItemDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'article_id',
-            'payment_order_id',
             'article_code',
             'article_name',
             'number_of_pieces',
@@ -466,11 +494,13 @@ class PaymentOrderListSerializer(serializers.ModelSerializer):
     items = PaymentItemDetailSerializer(read_only=True, many=True)
     total_cost = serializers.SerializerMethodField(read_only=True)
     status = serializers.SerializerMethodField(read_only=True)
+    uri = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = PaymentOrder
         fields = [
             'id',
             'email',
+            'uri',
             'address',
             'zip_code',
             'city',
@@ -494,6 +524,10 @@ class PaymentOrderListSerializer(serializers.ModelSerializer):
                                        item.article_price/100)) * item.number_of_pieces
 
         return math.ceil(total_sum)
+
+    def get_uri(self, obj):
+        request = self.context.get('request')
+        return api_reverse("product:order_detail", kwargs={"id": obj.id}, request=request)
 
     def get_status(self, obj):
         return obj.get_status_display()
@@ -630,3 +664,42 @@ class PaymentOrderDocumentTransitionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"transition":_('#NOT_ALLOWED_TRANSITION')}) 
 
         return data
+
+class PaymentItemAddRejectComment(serializers.ModelSerializer):
+    article_code = serializers.SerializerMethodField(read_only=True)
+    article_name = serializers.SerializerMethodField(read_only=True)
+    unit_of_measure = serializers.SerializerMethodField(read_only=True)
+    price = serializers.SerializerMethodField(read_only=True)
+    article_price = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = PaymentItem
+        fields = [
+            'id',
+            'article_id',
+            'article_code',
+            'article_name',
+            'number_of_pieces',
+            'unit_of_measure',
+            'user_discount',
+            'article_price',
+            'reject_comment',
+            'price'
+        ]
+        read_only_fields = ['payment_order_id', 'number_of_pieces',
+                            'article_id', 'user_discount', 'article_price']
+
+    def get_article_code(self, obj):
+        return obj.article_id.article_code
+
+    def get_article_name(self, obj):
+        return obj.article_id.article_name
+
+    def get_unit_of_measure(self, obj):
+        return obj.article_id.get_unit_of_measure_display()
+
+    def get_price(self, obj):
+        return obj.article_price - (obj.user_discount * obj.article_price/100)
+
+    def get_article_price(self, obj):
+        return int(obj.article_price)           

@@ -17,7 +17,7 @@ import sys
 from tablib import Dataset
 import openpyxl
 
-from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer, PaymentItemListSerializer, PaymentOrderListSerializer, PaymentOrderDetailSerializer, PaymentOrderCreateSerializer, PaymentOrderDocumentTransitionSerializer
+from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer, PaymentItemListSerializer, PaymentOrderListSerializer, PaymentOrderDetailSerializer, PaymentOrderCreateSerializer, PaymentOrderDocumentTransitionSerializer, PaymentItemAddRejectComment
 from product.models import Article, Producer, Attribute, ArticleImage, PaymentItem, PaymentOrder
 from account.models import UserDiscount, Account
 
@@ -39,7 +39,7 @@ class ArticleListApiView(generics.ListAPIView):
         category_name = self.request.GET.get('category_name', None)
         sub_category_name = self.request.GET.get('sub_category_name', None)
         producer_query = self.request.GET.get('producer', None)
-        
+
         attr_queryset = Attribute.objects.all()
         if category_id_query:
             queryset_list = queryset_list.filter(
@@ -425,18 +425,19 @@ class PaymentItemCreateApiView(generics.CreateAPIView,
 
             payment_item = PaymentItem(article_id=article_obj, payment_order_id=payment_order,
                                        user_discount=user_discount, article_price=article_price, number_of_pieces=number_of_pieces)
-
             payment_item.save()
 
             return super().get(request, *args, **kwargs)
 
 
 class PaymentOrderListApiView(generics.CreateAPIView, generics.ListAPIView):
-    permission_classes = [IsOwner, ]
+    permission_classes = [IsOwner,permissions.IsAdminUser, ]
     serializer_class = PaymentOrderListSerializer
 
     def get_queryset(self, *args, **kwargs):
         #TODO serch for specific payment order
+        if(self.request.user.is_superuser):
+            return PaymentOrder.objects.all()
         return PaymentOrder.objects.filter(email=self.request.user.email).order_by('id')
 
     def post(self, request, *args, **kwargs):
@@ -577,3 +578,30 @@ class PaymentOrderDocumentTransitionApiView(generics.CreateAPIView):
             payment_order.save()
 
             return JsonResponse({"message": "Payment order status transition has been complited."}, status=200)
+
+class PaymentItemRejectCommentAdminApiView(mixins.UpdateModelMixin,
+                                            generics.RetrieveAPIView):
+    permission_classes = [permissions.IsAdminUser, ]
+    serializer_class = PaymentItemAddRejectComment
+    pagination_class = None
+    lookup_field = 'id'
+
+    def get_queryset(self, *args, **kwargs):
+        return PaymentItem.objects.all().order_by('id')
+
+    def put(self, request, *args, **kwargs):
+        return self.update(self, request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            reject_comment = serializer.validated_data.get('reject_comment')
+            item_id = int(self.kwargs['id'])
+
+            payment_item = PaymentItem.objects.get(id=item_id)
+            payment_item.reject_comment = reject_comment
+            payment_item.save()
+
+            return super().get(request, *args, **kwargs)

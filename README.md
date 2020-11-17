@@ -2,10 +2,13 @@
 
 # How to start
 ## Install virtaul python environment():
-- pip install virtualenv
-- pip install virtualenvwrapper
+- py -m pip install --user virtualenv
 
-- ./env/Script/activate/ - to turn virtualenv
+## Create virtual enviroment
+- py -m venv env
+
+## Turn on Virtual enviroment
+- ./env/Script/activate/
 
 ## Install django and rest-framework and other modules:
 - pip install -r requirements.txt --no-index --find-links file:///tmp/packages (run this from root folder)

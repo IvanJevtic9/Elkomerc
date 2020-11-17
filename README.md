@@ -9,6 +9,8 @@
 
 ## Turn on Virtual enviroment
 - ./env/Script/activate/
+### if Activate.ps1 is disabled on the system run:
+-- Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Unrestricted
 
 ## Install django and rest-framework and other modules:
 - pip install -r requirements.txt --no-index --find-links file:///tmp/packages (run this from root folder)

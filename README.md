@@ -13,7 +13,7 @@
 -- Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Unrestricted
 
 ## Install django and rest-framework and other modules:
-- pip install -r requirements.txt --no-index --find-links file:///tmp/packages (run this from root folder)
+- pip install -r requirements.txt
 
 ## Start server:
 - python manage.py runserver - (run this from root folder)

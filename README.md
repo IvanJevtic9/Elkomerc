@@ -8,7 +8,7 @@
 - py -m venv env
 
 ## Turn on Virtual enviroment
-- ./env/Script/activate/
+- .\env\Scripts\activate
 ### if Activate.ps1 is disabled on the system run:
 -- Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Unrestricted
 

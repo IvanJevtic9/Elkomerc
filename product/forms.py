@@ -1,9 +1,10 @@
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 
-from .models import Producer, ProductGroup, Attribute, Article, ArticleImage, PaymentItem, PaymentOrder
+from .models import Producer, ProductGroup, Attribute, Article, ArticleImage, PaymentItem, PaymentOrder, ArticleGroup
 
 from account.models import UserDiscount, Account
+
 
 class ProducerForm(forms.ModelForm):
     class Meta:
@@ -16,6 +17,7 @@ class ProducerForm(forms.ModelForm):
             'description'
         ]
 
+
 class AttributeForm(forms.ModelForm):
     class Meta:
         model = Attribute
@@ -26,6 +28,7 @@ class AttributeForm(forms.ModelForm):
             'value'
         ]
 
+
 class ProductGroupForm(forms.ModelForm):
     class Meta:
         model = ProductGroup
@@ -33,6 +36,7 @@ class ProductGroupForm(forms.ModelForm):
             'id',
             'group_name'
         ]
+
 
 class ArticleForm(forms.ModelForm):
     class Meta:
@@ -50,6 +54,7 @@ class ArticleForm(forms.ModelForm):
             'currency',
             'is_available'
         ]
+
 
 class ArticleImageForm(forms.ModelForm):
     class Meta:
@@ -69,16 +74,18 @@ class ArticleImageForm(forms.ModelForm):
     def save(self, commit=True):
         article_image = super().save(commit=False)
         if article_image.image_name is None:
-            article_image.image_name = self.cleaned_data.get('image').name[0:29] if len(self.cleaned_data.get('image').name) > 30 else self.cleaned_data.get('image').name
+            article_image.image_name = self.cleaned_data.get('image').name[0:29] if len(
+                self.cleaned_data.get('image').name) > 30 else self.cleaned_data.get('image').name
 
         article_image.size = self.cleaned_data.get('image').size
         if hasattr(self.cleaned_data.get('image'), 'content_type'):
-            article_image.content_type = self.cleaned_data.get('image').content_type
+            article_image.content_type = self.cleaned_data.get(
+                'image').content_type
 
         if hasattr(self.cleaned_data.get('image'), 'height'):
             article_image.height = self.cleaned_data.get('image').height
         else:
-            article_image.height = self.cleaned_data.get('image').image.height   
+            article_image.height = self.cleaned_data.get('image').image.height
 
         if hasattr(self.cleaned_data.get('image'), 'width'):
             article_image.width = self.cleaned_data.get('image').width
@@ -87,8 +94,9 @@ class ArticleImageForm(forms.ModelForm):
 
         if commit:
             article_image.save()
-        return article_image    
-        
+        return article_image
+
+
 class PaymentItemForm(forms.ModelForm):
     class Meta:
         model = PaymentItem
@@ -100,6 +108,7 @@ class PaymentItemForm(forms.ModelForm):
             'article_price',
             'number_of_pieces'
         ]
+
     def clean(self, *args, **kwargs):
         id = self.instance.id
 
@@ -112,7 +121,8 @@ class PaymentItemForm(forms.ModelForm):
         qs = PaymentItem.objects.filter(payment_order_id=payment_order_id)
         qs = qs.filter(article_id=article_id)
 
-        error = forms.ValidationError(_('Article: ' + str(article_id) + ' - this article already exists on the payment order'))
+        error = forms.ValidationError(
+            _('Article: ' + str(article_id) + ' - this article already exists on the payment order'))
         if qs.exists() and id is None:
             raise error
         elif order_id_changed and qs.exists():
@@ -127,8 +137,10 @@ class PaymentItemForm(forms.ModelForm):
 
         article_obj = Article.objects.get(id=payment_item.article_id_id)
         payment_item.article_price = article_obj.price
-        user_discount = UserDiscount.objects.filter(product_group_id=article_obj.product_group_id)
-        user_discount = user_discount.filter(email=payment_item.payment_order_id.email_id)
+        user_discount = UserDiscount.objects.filter(
+            product_group_id=article_obj.product_group_id)
+        user_discount = user_discount.filter(
+            email=payment_item.payment_order_id.email_id)
         if user_discount.exists():
             payment_item.user_discount = user_discount[0].value
         else:
@@ -152,9 +164,9 @@ class PaymentOrderForm(forms.ModelForm):
             'note',
             'attribute_notes'
         ]
-    
+
     def save(self, commit=True):
-        payment_order = super().save(commit=False)  
+        payment_order = super().save(commit=False)
         account = Account.objects.get(email=payment_order.email_id)
 
         if payment_order.address == None:
@@ -162,8 +174,19 @@ class PaymentOrderForm(forms.ModelForm):
         if payment_order.city == None:
             payment_order.city = account.city
         if payment_order.zip_code == None:
-            payment_order.zip_code = account.zip_code    
+            payment_order.zip_code = account.zip_code
 
         payment_order.save()
 
         return payment_order
+
+
+class ArticleGroupForm(forms.ModelForm):
+    class Meta:
+        model = ArticleGroup
+        fields = [
+            'id',
+            'group_name',
+            'article_ids',
+            'description'
+        ]

@@ -14,9 +14,19 @@
 
 ## Install django and rest-framework and other modules:
 - pip install -r requirements.txt
+- If you have problem with run server command after running this command, you will need to maually install each lib you got problem with. 
 
-## Start server:
+## Start django server:
 - python manage.py runserver - (run this from root folder)
+## Start redis server (You have to download redis first):
+- Navigate to the redis folder and run command - redis-server
+
+## Starting celary (scheduler):
+
+- celery -A Elkomerc worker -l info -P solo
+- celery -A Elkomerc beat -l info
+
+- monitoring: celery flower -A Elkomerc --port=5555 
 
 # API 
 

@@ -3,7 +3,7 @@ from rest_framework.reverse import reverse as api_reverse
 
 from django.utils.translation import ugettext_lazy as _
 
-from product.models import Attribute, Article, ArticleImage, Producer, ProductGroup, PaymentItem, PaymentOrder
+from product.models import Attribute, Article, ArticleImage, Producer, ProductGroup, PaymentItem, PaymentOrder, ArticleGroup
 from product_category.models import Category, SubCategory
 
 from account.models import Stars, Comments, UserDiscount, User, Company, Account
@@ -702,4 +702,19 @@ class PaymentItemAddRejectComment(serializers.ModelSerializer):
         return obj.article_price - (obj.user_discount * obj.article_price/100)
 
     def get_article_price(self, obj):
-        return int(obj.article_price)           
+        return int(obj.article_price)
+
+class ArticleGroupListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArticleGroup
+        fields = [
+            'id',
+            'group_name',
+            'article_ids',
+            'description'
+        ]
+
+    def validate(self, data):
+        
+
+        return data

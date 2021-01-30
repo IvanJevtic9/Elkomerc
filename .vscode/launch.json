@@ -22,7 +22,7 @@
             "request": "launch",
             "console": "integratedTerminal",
             "program": "D:\\source\\DjangoRepos\\env\\Scripts\\celery.exe",
-            "pythonPath": "D:\\source\\DjangoRepos\\env\\Scripts\\python.exe",
+            "python": "D:\\source\\DjangoRepos\\env\\Scripts\\python.exe",
             "args": [
                 "worker",
                 "--app=Elkomerc",

@@ -3,8 +3,6 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
 
 # Create your models here.
-
-
 class Producer(models.Model):
     producer_name = models.CharField(max_length=30, unique=True)
     link = models.TextField(max_length=50, blank=True, null=True)
@@ -44,7 +42,6 @@ class ProductGroup(models.Model):
 
     def __str__(self):
         return self.group_name
-
 
 class Article(models.Model):
     CURRENCY_TYPE = (
@@ -101,6 +98,17 @@ class ArticleImage(models.Model):
     def __str__(self):
         return self.image_name
 
+class ArticleGroup(models.Model):
+    group_name = models.CharField(max_length=100)
+    description = models.TextField(blank=True,null=True)
+    article_ids = models.ManyToManyField(Article)
+
+    class Meta:
+        verbose_name = "Article group"
+        verbose_name_plural = "Article groups"
+
+    def __str__(self):
+        return self.group_name    
 
 class PaymentItem(models.Model):
     article_id = models.ForeignKey(

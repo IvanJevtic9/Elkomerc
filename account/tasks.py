@@ -15,7 +15,9 @@ from datetime import datetime
 
 from account.models import Account
 
-
+"""
+Function is not called yet
+"""
 @shared_task
 def send_email(current_site, account_id, to_email, template):
 

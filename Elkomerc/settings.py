@@ -21,20 +21,20 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '4#*bbf%pl&1_s9n4%(iqf=8twn5w)^+^r&#6nzm3q4cjn6xz^o'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 SUPER_USER = os.environ.get('SUPERUSER')
 SUPER_USER_PASS = os.environ.get('SUPERUSER_PASS')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-CLIENT_URL = 'http://localhost:4200'
-
-ALLOWED_HOSTS = []
+DEBUG = os.environ.get('DEBUG_VALUE')
+CLIENT_URL = os.environ.get('CLIENT_URL')
 
 #CORS_ORIGIN_ALLOW_ALL = True
 CORS_ORIGIN_WHITELIST = [
     CLIENT_URL
 ]
+
+ALLOWED_HOSTS = []
 
 # Application definition
 
@@ -94,7 +94,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'Elkomerc.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
@@ -123,7 +122,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 
@@ -141,10 +139,12 @@ IMPORT_EXPORT_USE_TRANSACTIONS = True
 
 # Email host server
 EMAIL_USE_TLS = True
+
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_HOST_USER = 'el.komerc.d.o.o.rs@gmail.com' #TODO -kao i za deploy ove informacije vaditi iz set os.environ.get('EMAIL_USER')
-EMAIL_HOST_PASSWORD = 'Alingconel1412'
-EMAIL_PORT = 587
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+EMAIL_PORT = os.environ.get('EMAIL_PORT')
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 #Log with facebook , email
@@ -211,9 +211,9 @@ JWT_AUTH = {
     'JWT_AUTH_COOKIE': None,
 }
 
-# Celery settings
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+# Celery settings - local env
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND')
 
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'

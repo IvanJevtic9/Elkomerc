@@ -17,8 +17,8 @@ import sys
 from tablib import Dataset
 import openpyxl
 
-from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer, PaymentItemListSerializer, PaymentOrderListSerializer, PaymentOrderDetailSerializer, PaymentOrderCreateSerializer, PaymentOrderDocumentTransitionSerializer, PaymentItemAddRejectComment
-from product.models import Article, Producer, Attribute, ArticleImage, PaymentItem, PaymentOrder
+from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer, PaymentItemListSerializer, PaymentOrderListSerializer, PaymentOrderDetailSerializer, PaymentOrderCreateSerializer, PaymentOrderDocumentTransitionSerializer, PaymentItemAddRejectComment, ArticleGroupListSerializer
+from product.models import Article, Producer, Attribute, ArticleImage, PaymentItem, PaymentOrder, ArticleGroup
 from account.models import UserDiscount, Account
 
 from account.api.permissions import IsOwner
@@ -605,3 +605,21 @@ class PaymentItemRejectCommentAdminApiView(mixins.UpdateModelMixin,
             payment_item.save()
 
             return super().get(request, *args, **kwargs)
+
+class ArticleGroupListApiView(generics.CreateAPIView,generics.ListAPIView):
+    permission_classes = [permissions.IsAdminUser, ]
+    serializer_class = ArticleGroupListSerializer
+
+    def get_queryset(self, *args, **kwargs):
+        return ArticleGroup.objects.all().order_by('id')
+
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+
+            return JsonResponse({"message": "Article group has been created."}, status=200)

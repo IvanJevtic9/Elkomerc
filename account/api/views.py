@@ -24,12 +24,10 @@ from account.models import Account, Company, User, PostCode, WishList, Stars, Co
 from product.models import Article
 
 from .permissions import AnonPermissionOnly, IsOwner, IsOwner
-from account.tasks import send_email, remove_unactive_accounts
 
 jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
 jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
 jwt_response_payload_handler = api_settings.JWT_RESPONSE_PAYLOAD_HANDLER
-
 
 class AuthView(APIView):
     authentication_classes = []
@@ -129,9 +127,20 @@ class RegisterAPIView(generics.CreateAPIView):
                                 last_name=last_name, date_of_birth=date_of_birth)
                 user_obj.save()
 
-            current_site = get_current_site(request).domain
-            send_email.delay(current_site=current_site, account_id=account_obj.id,
-                             to_email=serializer.validated_data.get('email'), template='acc_active_email.html')
+            current_site = get_current_site(request)
+            mail_subject = 'Activate your account.'
+            message = render_to_string('acc_active_email.html', {
+                'account': account_obj,
+                'domain': current_site.domain,
+                'uid': urlsafe_base64_encode(force_bytes(account_obj.id)),
+                'token': account_activation_token.make_token(account_obj)
+            })
+
+            to_email = serializer.validated_data.get('email')
+            email = EmailMessage(
+                mail_subject, message, to=[to_email]
+            )
+            email.send()
 
             return JsonResponse({"message": "Please confirm your email address to complete the registration."}, status=200)
 
@@ -169,9 +178,20 @@ class ChangePasswordViaEmailAPIView(generics.CreateAPIView):
             to_email = serializer.validated_data.get('email')
             account_obj = Account.objects.get(email=to_email)
 
-            current_site = get_current_site(request).domain
-            send_email.delay(current_site=current_site, account_id=account_obj.id,
-                             to_email=to_email, template='acc_change_password.html')
+            current_site = get_current_site(request)
+            mail_subject = 'Activate your account.'                           # This job create via celary - that doesn't work right now
+            message = render_to_string('acc_active_email.html', {
+                'account': account_obj,
+                'domain': current_site.domain,
+                'uid': urlsafe_base64_encode(force_bytes(account_obj.id)),
+                'token': account_activation_token.make_token(account_obj)
+            })
+
+            to_email = serializer.validated_data.get('email')
+            email = EmailMessage(
+                mail_subject, message, to=[to_email]
+            )
+            email.send()
 
         return JsonResponse({"message": "Please check your email address to reset password."}, status=200)
 
@@ -581,4 +601,4 @@ class AdminCommentApprove(mixins.DestroyModelMixin,
             comment_obj.approved = True
             comment_obj.save()
 
-            return super().get(request, *args, **kwargs) 
+            return super().get(request, *args, **kwargs)

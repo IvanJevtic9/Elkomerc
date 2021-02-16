@@ -164,19 +164,19 @@ class PaymentOrderAdmin(admin.ModelAdmin):
 
 class ArticleGroupAdmin(admin.ModelAdmin):
     form = ArticleGroupForm
-    list_display = ('id', 'group_name','show_articles', 'description')
+    list_display = ('id', 'group_name','show_articles', 'description', 'link')
     fieldsets = (
         ("General info", {
-         'fields': ('group_name', 'article_ids', 'description',)}),
+         'fields': ('group_name', 'article_ids', 'description', 'link',)}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('group_name', 'article_ids', 'description',),
+            'fields': ('group_name', 'article_ids', 'description', 'link',),
         }),
     )
-    search_fields = ('id', 'group_name', 'article_ids', 'description',)
-    ordering = ('id', 'group_name', 'article_ids', 'description',)
+    search_fields = ('id', 'group_name', 'article_ids', 'description','link',)
+    ordering = ('id', 'group_name', 'article_ids', 'description', 'link',)
 
     def show_articles(self, obj):
         return " / ".join([a.article_name for a in obj.article_ids.all()])

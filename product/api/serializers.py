@@ -8,6 +8,8 @@ from product_category.models import Category, SubCategory
 
 from account.models import Stars, Comments, UserDiscount, User, Company, Account
 
+from .utils import get_article_detail
+
 import mercantile
 import os
 import math
@@ -705,16 +707,47 @@ class PaymentItemAddRejectComment(serializers.ModelSerializer):
         return int(obj.article_price)
 
 class ArticleGroupListSerializer(serializers.ModelSerializer):
+    articles = serializers.SerializerMethodField(read_only=True)
+    uri = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = ArticleGroup
         fields = [
             'id',
             'group_name',
             'article_ids',
-            'description'
+            'articles',
+            'description',
+            'uri',
+            'link'
         ]
+        extra_kwargs = {'article_ids': {'write_only': True}}
 
-    def validate(self, data):
-        
+    def get_uri(self, obj):
+        request = self.context.get('request')
+        return api_reverse("product:article_group", kwargs={"id": obj.id}, request=request)
 
-        return data
+    def get_articles(self, obj):
+        articles = []
+        request = self.context.get('request')
+
+        return get_article_detail(obj, request)
+
+class ArticleGroupDetailSerializer(serializers.ModelSerializer): 
+    articles = serializers.SerializerMethodField(read_only=True)
+    class Meta:
+        model = ArticleGroup
+        fields = [
+            'id',
+            'group_name',
+            'article_ids',
+            'articles',
+            'description',
+            'link'
+        ]
+        extra_kwargs = {'article_ids': {'write_only': True}}
+
+    def get_articles(self, obj):
+        articles = []
+        request = self.context.get('request')
+
+        return get_article_detail(obj, request)

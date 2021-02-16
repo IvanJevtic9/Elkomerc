@@ -101,6 +101,7 @@ class ArticleImage(models.Model):
 class ArticleGroup(models.Model):
     group_name = models.CharField(max_length=100)
     description = models.TextField(blank=True,null=True)
+    link = models.CharField(max_length=100,blank=True,null=True)
     article_ids = models.ManyToManyField(Article)
 
     class Meta:

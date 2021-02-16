@@ -188,5 +188,6 @@ class ArticleGroupForm(forms.ModelForm):
             'id',
             'group_name',
             'article_ids',
-            'description'
+            'description',
+            'link'
         ]

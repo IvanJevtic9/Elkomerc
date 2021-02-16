@@ -26,8 +26,10 @@ SUPER_USER = os.environ.get('SUPERUSER')
 SUPER_USER_PASS = os.environ.get('SUPERUSER_PASS')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG_VALUE')
-CLIENT_URL = os.environ.get('CLIENT_URL')
+# DEBUG = os.environ.get('DEBUG_VALUE')
+# CLIENT_URL = os.environ.get('CLIENT_URL')
+DEBUG = True
+CLIENT_URL = 'http://localhost:4200'
 
 #CORS_ORIGIN_ALLOW_ALL = True
 CORS_ORIGIN_WHITELIST = [
@@ -59,6 +61,7 @@ INSTALLED_APPS = [
     'account',
     'product_category',
     'product',
+    'site_configurations',
 ]
 
 AUTH_USER_MODEL = 'account.Account'

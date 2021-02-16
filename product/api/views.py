@@ -1,6 +1,10 @@
 from rest_framework.response import Response
 from rest_framework import generics, mixins, permissions
+
+from account.api.permissions import IsAdminOrReadOnly
+
 from rest_framework_jwt.settings import api_settings
+from .utils import get_article_group_json_obj
 
 from django.db.models import Q
 from django.contrib.auth import authenticate
@@ -17,7 +21,7 @@ import sys
 from tablib import Dataset
 import openpyxl
 
-from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer, PaymentItemListSerializer, PaymentOrderListSerializer, PaymentOrderDetailSerializer, PaymentOrderCreateSerializer, PaymentOrderDocumentTransitionSerializer, PaymentItemAddRejectComment, ArticleGroupListSerializer
+from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer, PaymentItemListSerializer, PaymentOrderListSerializer, PaymentOrderDetailSerializer, PaymentOrderCreateSerializer, PaymentOrderDocumentTransitionSerializer, PaymentItemAddRejectComment, ArticleGroupListSerializer, ArticleGroupDetailSerializer
 from product.models import Article, Producer, Attribute, ArticleImage, PaymentItem, PaymentOrder, ArticleGroup
 from account.models import UserDiscount, Account
 
@@ -607,8 +611,9 @@ class PaymentItemRejectCommentAdminApiView(mixins.UpdateModelMixin,
             return super().get(request, *args, **kwargs)
 
 class ArticleGroupListApiView(generics.CreateAPIView,generics.ListAPIView):
-    permission_classes = [permissions.IsAdminUser, ]
+    permission_classes = [IsAdminOrReadOnly, ]
     serializer_class = ArticleGroupListSerializer
+    pagination_class = None
 
     def get_queryset(self, *args, **kwargs):
         return ArticleGroup.objects.all().order_by('id')
@@ -621,5 +626,68 @@ class ArticleGroupListApiView(generics.CreateAPIView,generics.ListAPIView):
         serializer = self.get_serializer(data=request.data)
 
         if serializer.is_valid(raise_exception=True):
+            group_name = serializer.validated_data.get('group_name', None)
+            article_ids = serializer.validated_data.get('article_ids', None)
+            description = serializer.validated_data.get('description', None)
+            link = serializer.validated_data.get('link', None)
 
-            return JsonResponse({"message": "Article group has been created."}, status=200)
+            art_grp = ArticleGroup(group_name=group_name,description=description,link=link)
+            art_grp.save()
+
+
+            for art_id in article_ids:
+                art = Article.objects.get(id=art_id.id)
+                art_grp.article_ids.add(art)
+
+            art_grp.save()
+
+            return get_article_group_json_obj(art_grp, request)
+
+class ArticleGroupDetailApiView(mixins.UpdateModelMixin,
+                           mixins.DestroyModelMixin,
+                           generics.RetrieveAPIView):
+    permission_classes = [permissions.IsAdminUser, ]
+    serializer_class = ArticleGroupDetailSerializer
+    pagination_class = None
+    lookup_field = 'id'
+    
+    def get_queryset(self, *args, **kwargs):
+        return ArticleGroup.objects.all().order_by('id')
+
+    def delete(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
+        return self.destroy(request, *args, **kwargs)    
+
+    def put(self, request, *args, **kwargs):
+        self.check_object_permissions(self.request, self.get_object())
+        return self.update(self, request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=False):
+            art_group_id = int(self.kwargs['id'])
+            art_group_obj = ArticleGroup.objects.get(id=art_group_id)
+
+            group_name = serializer.validated_data.get('group_name', None)
+            article_ids = serializer.validated_data.get('article_ids', None)
+            description = serializer.validated_data.get('description', None)
+            link = serializer.validated_data.get('link', None)
+
+            if group_name:
+                art_group_obj.group_name = group_name
+            if description:
+                art_group_obj.description = description
+            if link:
+                art_group_obj.link = link
+            if article_ids:
+                art_group_obj.article_ids.clear()
+                
+                for art_id in article_ids:
+                    art = Article.objects.get(id=art_id.id)
+                    art_group_obj.article_ids.add(art)
+
+            art_group_obj.save()
+
+            return get_article_group_json_obj(art_group_obj, request)

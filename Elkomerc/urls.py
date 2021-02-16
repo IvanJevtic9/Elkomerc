@@ -15,4 +15,5 @@ urlpatterns = [
     path(r'api/', include(('account.api.urls', 'account'), namespace='account')),
     path(r'api/product-category/', include(('product_category.api.urls', 'category'), namespace='category')),
     path(r'api/product/', include(('product.api.urls', 'product'), namespace='product')),
+    path(r'api/site-configurations/', include(('site_configurations.api.urls', 'site_configurations'), namespace='site_configurations')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -22,10 +22,8 @@
 - Navigate to the redis folder and run command - redis-server
 
 ## Starting celary (scheduler):
-
-- celery -A Elkomerc worker -l info -P solo
 - celery -A Elkomerc beat -l info
-
+- celery -A Elkomerc worker -l info -P solo
 - monitoring: celery flower -A Elkomerc --port=5555 
 
 # API 

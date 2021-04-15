@@ -462,6 +462,7 @@ class PaymentOrderSerializer(serializers.ModelSerializer):
                 'count': item.number_of_pieces,
                 'unit_of_measure': item.article_id.unit_of_measure,
                 'discount': item.user_discount,
+                'article_attributes': item.article_attributes,
                 'price': item.article_price,
                 'valid': item.valid
             })

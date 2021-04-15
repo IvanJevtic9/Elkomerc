@@ -1,9 +1,18 @@
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 
-from .models import Producer, ProductGroup, Attribute, Article, ArticleImage, PaymentItem, PaymentOrder, ArticleGroup
+from .models import (
+                    Producer, 
+                    ProductGroup,
+                    Attribute, 
+                    Article, 
+                    ArticleImage, 
+                    PaymentItem, 
+                    PaymentOrder, 
+                    ArticleGroup, 
+                    PaymentOrderCommentHistory)
 
-from account.models import UserDiscount, Account
+from account.models import UserDiscount, Account, User, Company
 
 
 class ProducerForm(forms.ModelForm):
@@ -96,6 +105,45 @@ class ArticleImageForm(forms.ModelForm):
             article_image.save()
         return article_image
 
+class PaymentOrderForm(forms.ModelForm):
+    class Meta:
+        model = PaymentOrder
+        fields = [
+            'id',
+            'email',
+            'full_name',
+            'address',
+            'city',
+            'zip_code',
+            'phone',
+            'method_of_payment',
+            'status',
+            'total_cost'
+        ]
+
+    def save(self, commit=True):
+        payment_order = super().save(commit=False)
+        account = Account.objects.get(email=payment_order.email_id)
+
+        if account.account_type is 'USR':
+            full_name = User.objects.get(email=account.email).__str__()
+        else:
+            full_name = Company.objects.get(email=account.email).__str__()
+
+        if payment_order.address == None:
+            payment_order.address = account.address
+        if payment_order.city == None:
+            payment_order.city = account.city
+        if payment_order.zip_code == None:
+            payment_order.zip_code = account.zip_code
+        if payment_order.status == None:
+            payment_order.status = "OH"
+
+        payment_order.full_name = full_name
+
+        payment_order.save()
+
+        return payment_order
 
 class PaymentItemForm(forms.ModelForm):
     class Meta:
@@ -115,8 +163,8 @@ class PaymentItemForm(forms.ModelForm):
         payment_order_id = int(self.data.get('payment_order_id'))
         article_id = int(self.data.get('article_id'))
 
-        order_id_changed = False if self.instance.payment_order_id.id == payment_order_id else True
-        article_id_changed = False if self.instance.article_id.id == article_id else True
+        order_id_changed = False if self.instance.payment_order_id_id == payment_order_id else True
+        article_id_changed = False if self.instance.article_id_id == article_id else True
 
         qs = PaymentItem.objects.filter(payment_order_id=payment_order_id)
         qs = qs.filter(article_id=article_id)
@@ -147,38 +195,37 @@ class PaymentItemForm(forms.ModelForm):
             payment_item.user_discount = 0
 
         payment_item.save()
-        return payment_item
-
-
-class PaymentOrderForm(forms.ModelForm):
-    class Meta:
-        model = PaymentOrder
-        fields = [
-            'id',
-            'email',
-            'address',
-            'city',
-            'zip_code',
-            'method_of_payment',
-            'status',
-            'note',
-            'attribute_notes'
-        ]
-
-    def save(self, commit=True):
-        payment_order = super().save(commit=False)
-        account = Account.objects.get(email=payment_order.email_id)
-
-        if payment_order.address == None:
-            payment_order.address = account.address
-        if payment_order.city == None:
-            payment_order.city = account.city
-        if payment_order.zip_code == None:
-            payment_order.zip_code = account.zip_code
+        
+        payment_order = self.cleaned_data['payment_order_id']
+        payment_items = PaymentItem.objects.filter(payment_order_id=payment_order.id)
+        
+        payment_order.total_cost = 0
+        for item in payment_items:
+            if item.valid in ['0', '1']:
+                payment_order.total_cost += ((item.article_price - (item.user_discount * item.article_price / 100)) * item.number_of_pieces)
 
         payment_order.save()
 
-        return payment_order
+        return payment_item
+
+class PaymentOrderCommentHistoryForm(forms.ModelForm):
+    class Meta:
+        model = PaymentOrderCommentHistory
+        fields = [
+            'id',
+            'payment_order_id',
+            'status',
+            'created_by',
+            'comment'
+        ]
+    def save(self, commit=True):
+        payment_comment = super().save(commit=False)
+
+        payment_comment.created_by = self.current_user
+        payment_comment.status = payment_comment.payment_order_id.status
+        payment_comment.save()
+        
+        return payment_comment
 
 
 class ArticleGroupForm(forms.ModelForm):

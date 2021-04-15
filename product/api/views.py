@@ -17,16 +17,17 @@ from django.core.files.base import ContentFile
 from io import BytesIO
 from io import StringIO
 import sys
+import datetime
+import pytz
 
 from tablib import Dataset
 import openpyxl
 
-from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, PaymentItemDetailSerializer, PaymentItemListSerializer, PaymentOrderListSerializer, PaymentOrderDetailSerializer, PaymentOrderCreateSerializer, PaymentOrderDocumentTransitionSerializer, PaymentItemAddRejectComment, ArticleGroupListSerializer, ArticleGroupDetailSerializer
-from product.models import Article, Producer, Attribute, ArticleImage, PaymentItem, PaymentOrder, ArticleGroup
-from account.models import UserDiscount, Account
+from .serializers import ArticleDetailSerializer, ArticleListSerializer, ProducerSerializer, ProducerListSerializer, ArticleImportSerializer, ArticleImagesImportSerializer, ProducerImagesImportSerializer, ArticleGroupListSerializer, ArticleGroupDetailSerializer, PaymentOrderCreateSerializer, PaymentOrderSerializer, PaymentOrderListSerializer, PaymentOrderUpdateSerializer
+from product.models import Article, Producer, Attribute, ArticleImage, PaymentItem, PaymentOrder, ArticleGroup, PaymentOrderCommentHistory
+from account.models import UserDiscount, Account, User, Company
 
-from account.api.permissions import IsOwner
-
+from account.api.permissions import IsOwner, IsOwnerOrAdmin
 
 class ArticleListApiView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, ]
@@ -297,318 +298,6 @@ class ProducerListApiView(generics.ListAPIView):
         return {'request': self.request}
 
 
-class PaymentItemDetailApiView(mixins.DestroyModelMixin,
-                               mixins.UpdateModelMixin,
-                               generics.RetrieveAPIView):
-    permission_classes = [IsOwner, ]
-    serializer_class = PaymentItemDetailSerializer
-    pagination_class = None
-    lookup_field = 'id'
-
-    def get_queryset(self, *args, **kwargs):
-        return PaymentItem.objects.all().order_by('id')
-
-    def put(self, request, *args, **kwargs):
-        self.check_object_permissions(self.request, self.get_object())
-        return self.update(self, request, *args, **kwargs)
-
-    def delete(self, request, *args, **kwargs):
-        self.check_object_permissions(self.request, self.get_object())
-        return self.destroy(request, *args, **kwargs)
-
-    def update(self, request, *args, **kwargs):
-        request = request.request
-        serializer = self.get_serializer(data=request.data)
-
-        if serializer.is_valid(raise_exception=True):
-            email = request.user.email
-            payment_item_id = int(self.kwargs['id'])
-
-            payment_item = PaymentItem.objects.get(id=payment_item_id)
-            article_obj = Article.objects.get(id=payment_item.article_id_id)
-
-            payment_order = PaymentOrder.objects.get(
-                id=payment_item.payment_order_id_id)
-            item_attributes = serializer.validated_data.get(
-                'item_attributes')
-            
-            payment_order_attributes_notes = ''
-            lines = payment_order.attribute_notes.split('\n')
-            lines.pop()
-            for ln in lines:
-                if article_obj.article_name in ln:
-                    lines.remove(ln)
-                else:
-                    payment_order_attributes_notes = payment_order_attributes_notes + ln + '\n'
-
-            payment_order.attribute_notes = payment_order_attributes_notes
-
-            attribute_item = ""
-            if item_attributes is not None:
-                for att in item_attributes:
-                    attribute_item = attribute_item + "Ime artikla: {2},Ime atributa: {0},vrednost atributa: {1}\n".format(
-                        att.get('attribute_name'), att.get('value'), article_obj.article_name)
-
-
-            payment_order.attribute_notes = payment_order.attribute_notes + attribute_item
-            payment_order.save()
-
-            user_discount = UserDiscount.objects.filter(email=email)
-            user_discount = user_discount.filter(
-                product_group_id=article_obj.product_group_id_id)
-            if user_discount.exists():
-                user_discount = user_discount[0].value
-            else:
-                user_discount = 0
-
-            payment_item.number_of_pieces = serializer.validated_data.get(
-                'number_of_pieces')
-            payment_item.article_price = article_obj.price
-            payment_item.user_discount = user_discount
-
-            payment_item.save()
-
-            return super().get(request, *args, **kwargs)
-
-
-class PaymentItemCreateApiView(generics.CreateAPIView,
-                               generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticated, ]
-    serializer_class = PaymentItemListSerializer
-
-    def get_queryset(self, *args, **kwargs):
-        payment_orders = PaymentOrder.objects.filter(
-            email=self.request.user.email).order_by('id')
-        items = []
-        for po in payment_orders:
-            qs = PaymentItem.objects.filter(payment_order_id=po)
-            for q in qs:
-                items.append(q)
-        return items
-
-    def post(self, request, *args, **kwargs):
-        return self.create(self, request, *args, **kwargs)
-
-    def create(self, request, *args, **kwargs):
-        request = request.request
-        serializer = self.get_serializer(data=request.data)
-
-        if serializer.is_valid(raise_exception=True):
-            email = request.user.email
-
-            article_id = serializer.validated_data.get('article_id')
-            payment_order_id = serializer.validated_data.get(
-                'payment_order_id')
-            number_of_pieces = serializer.validated_data.get(
-                'number_of_pieces')
-
-            payment_order = PaymentOrder.objects.get(id=payment_order_id)
-            article_obj = Article.objects.get(id=article_id)
-            article_price = article_obj.price
-
-            item_attributes = serializer.validated_data.get(
-                'item_attributes')
-
-            attribute_item = ""
-            if item_attributes is not None:
-                for att in item_attributes:
-                    attribute_item = attribute_item + "Ime artikla: {2},Ime atributa: {0},vrednost atributa: {1}\n".format(
-                        att.get('attribute_name'), att.get('value'), article_obj.article_name)
-
-
-            payment_order.attribute_notes = payment_order.attribute_notes + attribute_item
-            payment_order.save()
-
-            user_discount = UserDiscount.objects.filter(email=email)
-            user_discount = user_discount.filter(
-                product_group_id=article_obj.product_group_id)
-            if user_discount.exists():
-                user_discount = user_discount[0].value
-            else:
-                user_discount = 0
-
-            payment_item = PaymentItem(article_id=article_obj, payment_order_id=payment_order,
-                                       user_discount=user_discount, article_price=article_price, number_of_pieces=number_of_pieces)
-            payment_item.save()
-
-            return super().get(request, *args, **kwargs)
-
-
-class PaymentOrderListApiView(generics.CreateAPIView, generics.ListAPIView):
-    permission_classes = [IsOwner,permissions.IsAdminUser, ]
-    serializer_class = PaymentOrderListSerializer
-
-    def get_queryset(self, *args, **kwargs):
-        #TODO serch for specific payment order
-        if(self.request.user.is_superuser):
-            return PaymentOrder.objects.all()
-        return PaymentOrder.objects.filter(email=self.request.user.email).order_by('id')
-
-    def post(self, request, *args, **kwargs):
-        self.check_object_permissions(self.request, self.get_object())
-        return self.create(self, request, *args, **kwargs)
-
-
-class PaymentOrderCreateApiView(generics.CreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, ]
-    serializer_class = PaymentOrderCreateSerializer
-
-    def get_queryset(self, *args, **kwargs):
-        return PaymentOrder.objects.all()
-
-    def post(self, request, *args, **kwargs):
-        return self.create(self, request, *args, **kwargs)
-
-    def create(self, request, *args, **kwargs):
-        request = request.request
-        serializer = self.get_serializer(data=request.data)
-
-        if serializer.is_valid(raise_exception=True):
-            method_of_payment = serializer.validated_data.get(
-                'method_of_payment')
-            note = serializer.validated_data.get('note')
-            email = self.request.user.email
-            account_obj = Account.objects.get(email=email)
-
-            address = serializer.validated_data.get('address')
-            city = serializer.validated_data.get('city')
-            zip_code = serializer.validated_data.get('zip_code')
-
-            payment_order = PaymentOrder(email=account_obj, address=address, city=city,
-                                         zip_code=zip_code, method_of_payment=method_of_payment, note=note)
-            payment_order.attribute_notes = ""
-            payment_order.save()
-
-            items = serializer.validated_data.get('payment_items')
-            throw_error = False
-            for it in items:
-                article_id = it.get('article_id')
-                number_of_pieces = it.get('number_of_pieces')
-
-                qs = PaymentItem.objects.filter(article_id=article_id)
-                qs = qs.filter(payment_order_id=payment_order.id)
-                if qs.exists():
-                    throw_error = True
-
-                article = Article.objects.get(id=article_id)
-                item_attributes = it.get('item_attributes')
-                attribute_item = ""
-                if item_attributes is not None:
-                    for att in item_attributes:
-                        attribute_item = attribute_item + "Ime artikla: {2},Ime atributa: {0},vrednost atributa: {1}\n".format(
-                            att.get('attribute_name'), att.get('value'), article.article_name)
-
-                user_discount = UserDiscount.objects.filter(email=email)
-                user_discount = user_discount.filter(
-                    product_group_id=article.product_group_id)
-                if user_discount.exists():
-                    user_discount = user_discount[0].value
-                else:
-                    user_discount = 0
-
-                payment_order.attribute_notes = payment_order.attribute_notes + attribute_item
-                payment_order.save()
-                payment_item = PaymentItem(article_id=article, payment_order_id=payment_order,
-                                           user_discount=user_discount, article_price=article.price, number_of_pieces=number_of_pieces)
-                payment_item.save()
-
-            if throw_error:
-                payment_order.delete()
-                return JsonResponse({"message": "You have multiple payment items for the same article."}, status=400)
-            else:
-                return JsonResponse({"message": "Payment order has been created."}, status=200)
-
-class PaymentOrderDetailApiView(mixins.DestroyModelMixin,
-                               mixins.UpdateModelMixin,
-                               generics.RetrieveAPIView):
-    permission_classes = [IsOwner, ]
-    serializer_class = PaymentOrderDetailSerializer
-    pagination_class = None
-    lookup_field = 'id'
-
-    def get_queryset(self, *args, **kwargs):
-        return PaymentOrder.objects.all().order_by('id')
-
-    def put(self, request, *args, **kwargs):
-        self.check_object_permissions(self.request, self.get_object())
-        return self.update(self, request, *args, **kwargs)
-
-    def delete(self, request, *args, **kwargs):
-        self.check_object_permissions(self.request, self.get_object())
-        if serializer.is_valid(raise_exception=True):
-            return self.destroy(request, *args, **kwargs)
-
-    def update(self, request, *args, **kwargs):
-        request = request.request
-        serializer = self.get_serializer(data=request.data)
-
-        if serializer.is_valid(raise_exception=True):
-            address = serializer.validated_data.get('address')
-            zip_code = serializer.validated_data.get('zip_code')
-            city = serializer.validated_data.get('city')
-
-            note = serializer.validated_data.get('note')
-
-            payment_order = PaymentOrder.objects.get(id=self.kwargs['id'])
-            
-            payment_order.address = address
-            payment_order.zip_code = zip_code
-            payment_order.city = city
-            payment_order.note = note
-            payment_order.save()
-
-            return super().get(request, *args, **kwargs)
-
-class PaymentOrderDocumentTransitionApiView(generics.CreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, ]
-    serializer_class = PaymentOrderDocumentTransitionSerializer
-
-    def get_queryset(self, *args, **kwargs):
-        return PaymentOrder.objects.all().order_by('id')
-
-    def post(self, request, *args, **kwargs):
-        return self.create(self, request, *args, **kwargs)
-
-    def create(self, request, *args, **kwargs):
-        request = request.request
-        serializer = self.get_serializer(data=request.data)
-
-        if serializer.is_valid(raise_exception=True):
-            payment_order_id = serializer.validated_data.get('payment_order_id')
-            transit_status = serializer.validated_data.get('transit_status')
-            payment_order = PaymentOrder.objects.get(id=payment_order_id)
-
-            payment_order.status = transit_status
-            payment_order.save()
-
-            return JsonResponse({"message": "Payment order status transition has been complited."}, status=200)
-
-class PaymentItemRejectCommentAdminApiView(mixins.UpdateModelMixin,
-                                            generics.RetrieveAPIView):
-    permission_classes = [permissions.IsAdminUser, ]
-    serializer_class = PaymentItemAddRejectComment
-    pagination_class = None
-    lookup_field = 'id'
-
-    def get_queryset(self, *args, **kwargs):
-        return PaymentItem.objects.all().order_by('id')
-
-    def put(self, request, *args, **kwargs):
-        return self.update(self, request, *args, **kwargs)
-
-    def update(self, request, *args, **kwargs):
-        request = request.request
-        serializer = self.get_serializer(data=request.data)
-
-        if serializer.is_valid(raise_exception=True):
-            reject_comment = serializer.validated_data.get('reject_comment')
-            item_id = int(self.kwargs['id'])
-
-            payment_item = PaymentItem.objects.get(id=item_id)
-            payment_item.reject_comment = reject_comment
-            payment_item.save()
-
-            return super().get(request, *args, **kwargs)
 
 class ArticleGroupListApiView(generics.CreateAPIView,generics.ListAPIView):
     permission_classes = [IsAdminOrReadOnly, ]
@@ -691,3 +380,235 @@ class ArticleGroupDetailApiView(mixins.UpdateModelMixin,
             art_group_obj.save()
 
             return get_article_group_json_obj(art_group_obj, request)
+
+class PaymentOrderCreateApiView(generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, ]
+    serializer_class = PaymentOrderCreateSerializer
+
+    def get_queryset(self, *args, **kwargs):
+        return PaymentOrder.objects.all()
+    
+    def post(self, request, *args, **kwargs):
+        return self.create(self, request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            user = request.user            
+
+            address = serializer.validated_data.get('method_of_payment', None)
+            city = serializer.validated_data.get('city', None)
+            zip_code = serializer.validated_data.get('zip_code', None)
+            phone = serializer.validated_data.get('phone', None)
+            method_of_payment = serializer.validated_data.get('method_of_payment', 'PS')
+            comment = serializer.validated_data.get('comment', None)
+
+            account = Account.objects.get(email=user.email)
+
+            full_name = None
+            if account.account_type == 'USR':
+                full_name = User.objects.get(email=user.email).__str__()
+            else:   
+                full_name = Company.objects.get(email=user.email).__str__()
+
+            payment_order = PaymentOrder(
+                email = account,
+                full_name = full_name,
+                method_of_payment = method_of_payment,
+                status = 'OH',
+                address = address,
+                city = city,
+                zip_code = zip_code,
+                phone = phone 
+            )
+            
+            payment_order.save()
+
+            PaymentOrderCommentHistory(
+                created_by = account,
+                status='OH',
+                payment_order_id=payment_order,
+                comment=comment
+            ).save()
+
+            payment_items = serializer.validated_data.get('payment_items', None)
+            for item in payment_items:
+                article = item['article_id']
+                number_of_pieces = item['number_of_pieces']
+                article_attributes = item['article_attributes']
+
+                try:
+                    user_discount = UserDiscount.objects.get(email=account.email,product_group_id=article.product_group_id_id).value
+                except UserDiscount.DoesNotExist:
+                    user_discount = 0
+
+                payment_item = PaymentItem(
+                    article_id=article,
+                    payment_order_id=payment_order,
+                    user_discount=user_discount,
+                    number_of_pieces=number_of_pieces,
+                    article_price=article.price,
+                    article_attributes=article_attributes,
+                    valid='1'
+                )
+                payment_item.save()
+
+                payment_order.total_cost += ((article.price - (user_discount * article.price / 100)) * number_of_pieces)
+
+            payment_order.save()
+
+            return JsonResponse({"message": "Payment order has been created."}, status=200)
+
+class PaymentOrderDetailApiView(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsOwnerOrAdmin,]
+    serializer_class = PaymentOrderSerializer
+    pagination_class = None
+    lookup_field = 'id'
+
+    def get_queryset(self, *args, **kwargs):
+        return PaymentOrder.objects.all()
+
+    def get_serializer_class(self, *args, **kwargs):
+        if self.request and self.request.method == 'GET':
+            return PaymentOrderSerializer
+        return PaymentOrderUpdateSerializer
+
+    def get(self, request, *args, **kwargs):
+        self.serializer_class = self.get_serializer_class(self,*args, **kwargs)
+        return super().get(self, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        self.serializer_class = self.get_serializer_class(self, *args, **kwargs)
+        self.check_object_permissions(self.request, self.get_object())
+        return self.update(self, request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        request = request.request
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            user = request.user            
+
+            payment_order = PaymentOrder.objects.get(id=int(self.kwargs['id']))
+            account = Account.objects.get(email=user.email)
+
+            address = serializer.validated_data.get('address', None)
+            city = serializer.validated_data.get('city', None)
+            zip_code = serializer.validated_data.get('zip_code', None)
+            phone = serializer.validated_data.get('phone', None)
+            status = serializer.validated_data.get('status',None)
+            comment = serializer.validated_data.get('comment', '')
+
+            if address:
+                payment_order.address = address
+            if city:
+                payment_order.city = city
+            if zip_code:
+                payment_order.zip_code = zip_code
+            if phone:
+                payment_order.phone = phone
+
+            payment_order.status = status
+
+            PaymentOrderCommentHistory(
+                created_by = account,
+                status=status,
+                payment_order_id=payment_order,
+                comment=comment
+            ).save()
+
+            payment_items = serializer.validated_data.get('payment_items', None)
+
+            existing_payment_items = PaymentItem.objects.filter(payment_order_id=payment_order.id)
+            for ei in existing_payment_items:
+                if ei.valid == '-1':
+                    ei.delete()
+                elif ei.valid == '1':
+                    ei.valid='0'
+                    ei.save()
+
+            if payment_items:
+                for item in payment_items:
+                    article = item['article_id']
+                    number_of_pieces = item['number_of_pieces']
+                    article_attributes = item.get('article_attributes',None)
+
+                    try:
+                        old_item = existing_payment_items.get(article_id=item['article_id'])
+                        old_item.valid = '-1'
+                        old_item.save()
+                    except PaymentItem.DoesNotExist:
+                        pass
+
+                    try:
+                        user_discount = UserDiscount.objects.get(email=account.email,product_group_id=article.product_group_id_id).value
+                    except UserDiscount.DoesNotExist:
+                        user_discount = 0
+
+                    if number_of_pieces is not -1:
+                        payment_item = PaymentItem(
+                            article_id=article,
+                            payment_order_id=payment_order,
+                            user_discount=user_discount,
+                            number_of_pieces=number_of_pieces,
+                            article_price=article.price,
+                            article_attributes=article_attributes,
+                            valid='1'
+                        )
+                        payment_item.save()
+
+            new_payment_items = PaymentItem.objects.filter(payment_order_id=payment_order.id)
+
+            payment_order.total_cost = 0
+            for item in new_payment_items:
+                if item.valid in ['0', '1']:
+                    payment_order.total_cost += ((item.article_price - (item.user_discount * item.article_price / 100)) * item.number_of_pieces)
+
+            payment_order.save()                        
+
+            return JsonResponse({"message": "Payment order has been updated."}, status=200) 
+
+class PaymentOrderListApiView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated,]
+    serializer_class = PaymentOrderListSerializer
+
+    def get_queryset(self, *args, **kwargs):
+        queryset_list = PaymentOrder.objects.all()
+        order_field = self.request.GET.get('order_by',None)
+
+        status_query = dict(self.request.GET.lists()).get('status', None)
+        full_name_query = self.request.GET.get('full_name', None)
+        date_from = self.request.GET.get('date_from',None)
+        date_to = self.request.GET.get('date_to',None)
+
+        try:
+            if date_from:
+                datetime.datetime.strptime(date_from, '%Y-%m-%d')
+            else:
+                date_from = datetime.datetime(1,1,1,0,0,0,0,tzinfo=pytz.UTC)
+            if date_to:
+                datetime.datetime.strptime(date_to, '%Y-%m-%d')
+            else:
+                date_to = datetime.datetime(9999,12,31,0,0,0,0,tzinfo=pytz.UTC)
+
+            if date_from or date_to:
+                queryset_list = queryset_list.filter(time_created__range=[date_from,date_to])    
+        except ValueError:
+            pass
+
+        if status_query:
+            queryset_list = queryset_list.filter(
+                Q(status__in=status_query)
+            ).distinct()
+
+        if full_name_query:
+            queryset_list = queryset_list.filter(
+                Q(full_name__contains=full_name_query)
+            ).distinct()
+
+        if order_field in ['id', 'full_name', 'email', 'status', 'time_created', 'time_modified', 'total_cost', '-id', '-email', '-full_name', '-status', '-time_created', '-time_modified', '-total_cost']:
+            queryset_list = queryset_list.order_by(order_field)
+
+        return queryset_list

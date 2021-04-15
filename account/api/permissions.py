@@ -29,6 +29,23 @@ class IsOwner(permissions.BasePermission):
         else:
             return False
 
+class IsOwnerOrAdmin(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated)
+
+    message = 'You do not have permissions for this request.'
+
+    def has_object_permission(self, request, view, obj):
+        if request.user.is_staff:
+            return True
+        elif hasattr(obj, 'email_id'):
+            return obj.email_id == request.user.email
+        elif hasattr(obj, 'email'):
+            return obj.email == request.user.email
+        elif hasattr(obj, 'payment_order_id') and hasattr(obj.payment_order_id, 'email_id'):
+            return obj.payment_order_id.email_id == request.user.email
+        else:
+            return False
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     message = 'You do not have permission for this request.'

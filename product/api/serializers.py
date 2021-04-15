@@ -3,7 +3,7 @@ from rest_framework.reverse import reverse as api_reverse
 
 from django.utils.translation import ugettext_lazy as _
 
-from product.models import Attribute, Article, ArticleImage, Producer, ProductGroup, PaymentItem, PaymentOrder, ArticleGroup
+from product.models import Attribute, Article, ArticleImage, Producer, ProductGroup, PaymentItem, PaymentOrder, ArticleGroup, PaymentOrderCommentHistory
 from product_category.models import Category, SubCategory
 
 from account.models import Stars, Comments, UserDiscount, User, Company, Account
@@ -13,7 +13,7 @@ from .utils import get_article_detail
 import mercantile
 import os
 import math
-
+import decimal
 
 class ProducerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -352,360 +352,6 @@ class ProducerImagesImportSerializer(serializers.ModelSerializer):
     def validate_exel_file(self, value):
         return value
 
-
-class PaymentItemDetailSerializer(serializers.ModelSerializer):
-    article_code = serializers.SerializerMethodField(read_only=True)
-    article_name = serializers.SerializerMethodField(read_only=True)
-    unit_of_measure = serializers.SerializerMethodField(read_only=True)
-    price = serializers.SerializerMethodField(read_only=True)
-    article_price = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = PaymentItem
-        fields = [
-            'id',
-            'article_id',
-            'article_code',
-            'article_name',
-            'number_of_pieces',
-            'unit_of_measure',
-            'user_discount',
-            'article_price',
-            'reject_comment',
-            'price'
-        ]
-        read_only_fields = ['payment_order_id',
-                            'article_id', 'user_discount', 'article_price', 'reject_comment']
-
-    def get_article_code(self, obj):
-        return obj.article_id.article_code
-
-    def get_article_name(self, obj):
-        return obj.article_id.article_name
-
-    def get_unit_of_measure(self, obj):
-        return obj.article_id.get_unit_of_measure_display()
-
-    def get_price(self, obj):
-        return obj.article_price - (obj.user_discount * obj.article_price/100)
-
-    def get_article_price(self, obj):
-        return int(obj.article_price)
-
-    def validate(self, data):
-        email = self.context.get('request').user.email
-        data = self.context.get('request').data
-
-        id = int(self.context.get(
-            'request').parser_context.get('kwargs').get('id'))
-        payment_item = PaymentItem.objects.get(id=id)
-        payment_order_id = payment_item.payment_order_id
-        payment_order = PaymentOrder.objects.get(id=payment_order_id.id)
-
-        if payment_order.email_id != email:
-            raise serializers.ValidationError(
-                {'payment_order_id': _("#OWNER_PERMISSION")})
-
-        if payment_order.status in ["RE", "SS", "PD"]:
-            raise serializers.ValidationError(
-                {'payment_order_id': _("#ORDER_STATUS_ERROR")})
-
-        return data
-
-
-class PaymentItemListSerializer(serializers.ModelSerializer):
-    price = serializers.SerializerMethodField(read_only=True)
-    uri = serializers.SerializerMethodField(read_only=True)
-    article_price = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = PaymentItem
-        fields = [
-            'uri',
-            'article_id',
-            'payment_order_id',
-            'number_of_pieces',
-            'user_discount',
-            'article_price',
-            'reject_comment',
-            'price'
-        ]
-
-        read_only_fields = ['user_discount', 'reject_comment']
-
-    def get_uri(self, obj):
-        request = self.context.get('request')
-        return api_reverse("product:item_detail", kwargs={"id": obj.id}, request=request)
-
-    def get_price(self, obj):
-        return obj.article_price - (obj.user_discount * obj.article_price/100)
-
-    def get_article_price(self, obj):
-        return int(obj.article_price)
-
-    def validate(self, data):
-        email = self.context.get('request').user.email
-        data = self.context.get('request').data
-
-        payment_order_id = data.get('payment_order_id')
-        article_id = data.get('article_id')
-        number_of_pieces = data.get('number_of_pieces')
-
-        if number_of_pieces is None or number_of_pieces is '':
-            raise serializers.ValidationError(
-                {'number_of_pieces': _("#MUST_BE_GREATER_THEN_ZERO")})
-
-        if int(number_of_pieces) < 1:
-            raise serializers.ValidationError(
-                {'number_of_pieces': _("#MUST_BE_GREATER_THEN_ZERO")})
-
-        qs = PaymentOrder.objects.filter(id=payment_order_id)
-        if not qs.exists():
-            raise serializers.ValidationError(
-                {'payment_order_id': _("#PAYMENT_ORDER_DOES_NOT_EXIST")})
-        else:
-            payment_order = qs[0]
-
-        if payment_order.email_id != email:
-            raise serializers.ValidationError(
-                {'payment_order_id': _("#OWNER_PERMISSION")})
-
-        if payment_order.status in ["RE", "SS", "PD"]:
-            raise serializers.ValidationError(
-                {'payment_order_id': _("#ORDER_STATUS_ERROR")})
-
-        qs = Article.objects.filter(id=article_id)
-        if not qs.exists():
-            raise serializers.ValidationError(
-                {'article_id': _("#ARTICLE_DOES_NOT_EXIST")})
-        else:
-            article = qs[0]
-
-        qs = PaymentItem.objects.filter(article_id=article_id)
-        qs = qs.filter(payment_order_id=payment_order_id)
-        if qs.exists():
-            raise serializers.ValidationError(
-                {'article_id': _("#ARTICLE_ALREADY_IN_ORDER")})
-
-        payment_order.status = "DR"
-        payment_order.save()
-
-        return data
-
-class PaymentOrderListSerializer(serializers.ModelSerializer):
-    items = PaymentItemDetailSerializer(read_only=True, many=True)
-    total_cost = serializers.SerializerMethodField(read_only=True)
-    status = serializers.SerializerMethodField(read_only=True)
-    uri = serializers.SerializerMethodField(read_only=True)
-    class Meta:
-        model = PaymentOrder
-        fields = [
-            'id',
-            'email',
-            'uri',
-            'address',
-            'zip_code',
-            'city',
-            'items',
-            'time_created',
-            'method_of_payment',
-            'note',
-            'attribute_notes',
-            'total_cost',
-            'status'
-        ]
-        read_only_fields = ['email', 'time_created', 'status', 'attribute_notes']
-
-    def get_total_cost(self, obj):
-        items = PaymentItem.objects.filter(payment_order_id=obj.id)
-        total_sum = 0
-
-        for item in items:
-            total_sum = total_sum + \
-                (item.article_price - (item.user_discount *
-                                       item.article_price/100)) * item.number_of_pieces
-
-        return math.ceil(total_sum)
-
-    def get_uri(self, obj):
-        request = self.context.get('request')
-        return api_reverse("product:order_detail", kwargs={"id": obj.id}, request=request)
-
-    def get_status(self, obj):
-        return obj.get_status_display()
-
-class PaymentOrderCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PaymentOrder
-        fields = [
-            'id',
-            'email',
-            'address',
-            'zip_code',
-            'city',
-            'time_created',
-            'method_of_payment',
-            'note',
-            'attribute_notes',
-            'status'
-        ]
-
-        read_only_fields = ['email', 'time_created', 'status', 'attribute_notes']    
-
-    def validate(self, data):
-        data = self.context.get('request').data
-
-        items = data.get('payment_items')
-        for it in items:
-            article_id = it.get('article_id')
-            number_of_pieces = it.get('number_of_pieces')
-
-            if number_of_pieces is None or number_of_pieces is '':
-                raise serializers.ValidationError(
-                    {'number_of_pieces': _("#MUST_BE_GREATER_THEN_ZERO")})
-
-            if int(number_of_pieces) < 1:
-                raise serializers.ValidationError(
-                    {'number_of_pieces': _("#MUST_BE_GREATER_THEN_ZERO")})
-
-            qs = Article.objects.filter(id=article_id)
-            if not qs.exists():
-                raise serializers.ValidationError(
-                    {'article_id': _("Article with id {0} doesn't exist".format(article_id))})
-
-        return data
-
-
-class PaymentOrderDetailSerializer(serializers.ModelSerializer):
-    items = PaymentItemDetailSerializer(read_only=True, many=True)
-    total_cost = serializers.SerializerMethodField(read_only=True)
-    status = serializers.SerializerMethodField(read_only=True)
-    class Meta:
-        model = PaymentOrder
-        fields = [
-            'id',
-            'email',
-            'address',
-            'zip_code',
-            'city',
-            'items',
-            'time_created',
-            'method_of_payment',
-            'note',
-            'attribute_notes',
-            'total_cost',
-            'status'
-        ]
-
-        read_only_fields = ['email', 'time_created', 'status', 'attribute_notes'] 
-
-    def get_total_cost(self, obj):
-        items = PaymentItem.objects.filter(payment_order_id=obj.id)
-        total_sum = 0
-
-        for item in items:
-            total_sum = total_sum + \
-                (item.article_price - (item.user_discount *
-                                       item.article_price/100)) * item.number_of_pieces
-
-        return math.ceil(total_sum)
-
-    def get_status(self, obj):
-        return obj.get_status_display()
-
-    def validate(self, data):
-        id = self.context.get('request').parser_context.get('kwargs').get('id')
-        payment_order = PaymentOrder.objects.get(id=id)
-        if payment_order.status in ["RE", "SS", "PD"]:
-            raise serializers.ValidationError(
-                    {'status': _("#PAYMENT_ORDER_IN_NOT_VALID_STATUS_FOR_UPDATE")})
-
-        return data
-
-class PaymentOrderDocumentTransitionSerializer(serializers.ModelSerializer):
-    payment_order_id = serializers.IntegerField(required=True)
-    transit_status = serializers.CharField(max_length=2, required=True)
-    class Meta:
-        model = PaymentOrder
-        fields = [
-            'payment_order_id',
-            'transit_status'
-        ]
-    
-    def validate_payment_order_id(self,value):
-        try:
-            payment_order = PaymentOrder.objects.get(id=value)
-        except PaymentOrder.DoesNotExist:
-            raise serializers.ValidationError(_('#PAYMENT_ORDER_DOES_NOT_EXIST'))    
-        
-        return value
-
-    def validate(self, data):
-        email = self.context.get('request').user.email
-        is_superuser = self.context.get('request').user.is_superuser
-
-        transit_status = data.get('transit_status')
-
-        payment_order = PaymentOrder.objects.get(id=data.get('payment_order_id'))
-        status = payment_order.status
-
-        if payment_order.email_id != email and not is_superuser:
-            raise serializers.ValidationError({"user":_('#DO_NOT_HAVE_PERMISSION')})   
-    
-        if (status == "DR" and transit_status == "IN") or \
-           (status == "RW" and transit_status == "DR" ):
-            return data    
-        elif ((status == "IN" and transit_status == "RE" ) or \
-           (status == "IN" and transit_status == "RW" ) or \
-           (status == "IN" and transit_status == "WF" ) or \
-           (status == "WF" and transit_status == "SS" ) or \
-           (status == "SS" and transit_status == "PD" )) and \
-            is_superuser:
-            return data
-        else:
-            raise serializers.ValidationError({"transition":_('#NOT_ALLOWED_TRANSITION')}) 
-
-        return data
-
-class PaymentItemAddRejectComment(serializers.ModelSerializer):
-    article_code = serializers.SerializerMethodField(read_only=True)
-    article_name = serializers.SerializerMethodField(read_only=True)
-    unit_of_measure = serializers.SerializerMethodField(read_only=True)
-    price = serializers.SerializerMethodField(read_only=True)
-    article_price = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = PaymentItem
-        fields = [
-            'id',
-            'article_id',
-            'article_code',
-            'article_name',
-            'number_of_pieces',
-            'unit_of_measure',
-            'user_discount',
-            'article_price',
-            'reject_comment',
-            'price'
-        ]
-        read_only_fields = ['payment_order_id', 'number_of_pieces',
-                            'article_id', 'user_discount', 'article_price']
-
-    def get_article_code(self, obj):
-        return obj.article_id.article_code
-
-    def get_article_name(self, obj):
-        return obj.article_id.article_name
-
-    def get_unit_of_measure(self, obj):
-        return obj.article_id.get_unit_of_measure_display()
-
-    def get_price(self, obj):
-        return obj.article_price - (obj.user_discount * obj.article_price/100)
-
-    def get_article_price(self, obj):
-        return int(obj.article_price)
-
 class ArticleGroupListSerializer(serializers.ModelSerializer):
     articles = serializers.SerializerMethodField(read_only=True)
     uri = serializers.SerializerMethodField(read_only=True)
@@ -751,3 +397,124 @@ class ArticleGroupDetailSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
 
         return get_article_detail(obj, request)
+
+class PaymentItemCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentItem
+        fields = [
+            'article_id',
+            'number_of_pieces',
+            'article_attributes'
+        ]
+
+class PaymentOrderCreateSerializer(serializers.ModelSerializer):
+    payment_items = PaymentItemCreateSerializer(many=True)
+    comment = serializers.CharField(max_length=300)
+    class Meta:
+        model = PaymentOrder
+        fields = [
+            'method_of_payment',
+            'address',
+            'city',
+            'zip_code',
+            'phone',
+            'comment',
+            'payment_items'
+        ]
+
+    def validate(self, data):
+        if(len(data['payment_items']) < 1):
+            raise serializers.ValidationError(
+                        {'payment_items': _("There must be at least one payment item.")})
+        return data
+
+class PaymentOrderSerializer(serializers.ModelSerializer):
+    payment_items = serializers.SerializerMethodField(read_only=True)
+    history = serializers.SerializerMethodField(read_only=True)
+    class Meta:
+        model = PaymentOrder
+        fields = [
+            'id',
+            'email',
+            'full_name',
+            'method_of_payment',
+            'status',
+            'address',
+            'city',
+            'zip_code',
+            'phone',
+            'total_cost',
+            'payment_items',
+            'time_created',
+            'time_modified',
+            'history'
+        ]
+    
+    def get_payment_items(self, obj):
+        payment_items = PaymentItem.objects.filter(payment_order_id=obj.id)
+        items = []
+
+        for item in payment_items:
+            items.append({
+                'article_id': item.article_id.id,
+                'article_code': item.article_id.article_code,
+                'name': item.article_id.article_name,
+                'count': item.number_of_pieces,
+                'unit_of_measure': item.article_id.unit_of_measure,
+                'discount': item.user_discount,
+                'price': item.article_price,
+                'valid': item.valid
+            })
+
+        return sorted(items, key= lambda x: int(x['valid']))
+    
+    def get_history(self, obj):
+        comment_history = PaymentOrderCommentHistory.objects.filter(payment_order_id=obj.id)
+        history = []
+
+        for comment in comment_history:
+            history.append({
+                'created_by': comment.created_by.email,
+                'comment': comment.comment,
+                'status': comment.status,
+                'time_created': comment.time_created
+            })
+        return sorted(history, key= lambda x: x['time_created'])
+
+class PaymentOrderListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentOrder
+        fields = [
+            'id',
+            'full_name',
+            'email',
+            'status',
+            'time_created',
+            'time_modified',
+            'total_cost'
+        ]
+
+class PaymentOrderUpdateSerializer(serializers.ModelSerializer):
+    payment_items = PaymentItemCreateSerializer(many=True, required=False)
+    comment = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    class Meta:
+        model = PaymentOrder
+        fields = [
+            'address',
+            'city',
+            'zip_code',
+            'phone',
+            'status',
+            'comment',
+            'payment_items'
+        ]
+        extra_kwargs = {'address': {'required': False},'city': {'required': False},'zip_code': {'required': False},'phone': {'required': False}}
+
+    def validate(self, data):
+        if data.get('status', None) is None:
+            raise serializers.ValidationError({'status': _("Status is required field.")})
+        
+        if data.get('status', None) not in ['OH', 'IP', 'RJ', 'MF', 'AP', 'SS', 'PR', 'PD']:
+            raise serializers.ValidationError({'status': _("Unknown status.")})
+
+        return data

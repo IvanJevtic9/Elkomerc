@@ -6,15 +6,11 @@ from .views import (ArticleListApiView,
                     ArticleDetailApiView,
                     ArticleImagesImportApiView,
                     ProducerImagesImportApiView,
-                    PaymentItemDetailApiView,
-                    PaymentItemCreateApiView,
-                    PaymentOrderListApiView,
+                    ArticleGroupListApiView,
+                    ArticleGroupDetailApiView,
                     PaymentOrderCreateApiView,
                     PaymentOrderDetailApiView,
-                    PaymentOrderDocumentTransitionApiView,
-                    PaymentItemRejectCommentAdminApiView,
-                    ArticleGroupListApiView,
-                    ArticleGroupDetailApiView)
+                    PaymentOrderListApiView)
 
 urlpatterns = [
     url(r'^articles/$', ArticleListApiView.as_view()),
@@ -26,11 +22,8 @@ urlpatterns = [
     url(r'^articles/import/$', ArticleImportApiView.as_view()),
     url(r'^articles/images/import/$', ArticleImagesImportApiView.as_view()),
     url(r'^producers/images/import/$', ProducerImagesImportApiView.as_view()),
-    url(r'^payments/item/(?P<id>\d+)/$', PaymentItemDetailApiView.as_view(), name='item_detail'),
-    url(r'^payments/item/$', PaymentItemCreateApiView.as_view()),
-    url(r'^payments/item/admin-update/(?P<id>\d+)/$', PaymentItemRejectCommentAdminApiView.as_view()),
-    url(r'^payments/order/$', PaymentOrderListApiView.as_view()),
-    url(r'^payments/order/(?P<id>\d+)/$', PaymentOrderDetailApiView.as_view(), name='order_detail'),
-    url(r'^payments/order/create/$', PaymentOrderCreateApiView.as_view()),
-    url(r'^payments/order/transition/$', PaymentOrderDocumentTransitionApiView.as_view()),
+    
+    url(r'^payment-orders/create/$', PaymentOrderCreateApiView.as_view()),
+    url(r'^payment-orders/$', PaymentOrderListApiView.as_view()),
+    url(r'^payment-orders/(?P<id>\d+)/$', PaymentOrderDetailApiView.as_view())
 ]

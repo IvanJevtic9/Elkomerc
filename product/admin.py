@@ -9,6 +9,7 @@ from .models import (Producer,
                      ArticleImage,
                      PaymentItem,
                      PaymentOrder,
+                     PaymentOrderCommentHistory,
                      ArticleGroup)
 
 from .forms import (ProducerForm,
@@ -18,11 +19,8 @@ from .forms import (ProducerForm,
                     ArticleImageForm,
                     PaymentItemForm,
                     PaymentOrderForm,
+                    PaymentOrderCommentHistoryForm,
                     ArticleGroupForm)
-
-# Register your models here.
-
-# list_filter
 
 
 class ProducerAdmin(ImportExportModelAdmin):
@@ -123,15 +121,15 @@ class PaymentItemAdmin(admin.ModelAdmin):
     form = PaymentItemForm
     readonly_fields = ('user_discount', 'article_price')
     list_display = ('id', 'article_id', 'payment_order_id',
-                    'amount', 'user_discount', 'article_price')
+                    'amount', 'user_discount', 'article_price', 'article_attributes',)
     fieldsets = (
         ("General info", {'fields': ('article_id', 'payment_order_id',
-                                     'number_of_pieces', 'user_discount', 'article_price',)}),
+                                     'number_of_pieces', 'user_discount', 'article_price', 'article_attributes',)}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('article_id', 'payment_order_id', 'number_of_pieces', 'user_discount', 'article_price',),
+            'fields': ('article_id', 'payment_order_id', 'number_of_pieces', 'user_discount', 'article_price', 'article_attributes',),
         }),
     )
     search_fields = ('id', 'article_id__article_name',
@@ -142,24 +140,54 @@ class PaymentItemAdmin(admin.ModelAdmin):
 
 class PaymentOrderAdmin(admin.ModelAdmin):
     form = PaymentOrderForm
-    readonly_fields = ('attribute_notes',)
-    list_display = ('id', 'email', 'address', 'zip_code', 'city',
-                    'note', 'attribute_notes', 'method_of_payment', 'status')
+    readonly_fields = ('time_created','time_modified', 'total_cost')
+    list_display = ('id', 'full_name', 'address', 'zip_code', 'city', 'phone',
+                    'method_of_payment', 'total_cost', 'status', 'time_created')
     list_filter = ('status',)
     fieldsets = (
         ("General info", {'fields': ('email', 'address', 'zip_code',
-                                     'city', 'note', 'method_of_payment', 'status',)}),
+                                     'city', 'phone', 'method_of_payment', 'status', 'total_cost','time_created','time_modified',)}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'address', 'zip_code', 'city', 'note', 'method_of_payment', 'status',),
+            'fields': ('email', 'address', 'zip_code', 'city', 'phone', 'method_of_payment', 'status',),
         }),
     )
     search_fields = ('id', 'email__email', 'address', 'zip_code',
                      'city', 'method_of_payment', 'status',)
-    ordering = ('id', 'email__email', 'address', 'zip_code', 'city',
-                'note', 'attribute_notes', 'method_of_payment', 'status',)
+    ordering = ('id', 'email__email', 'address', 'zip_code', 'city', 'method_of_payment', 'status', 'total_cost', 'time_created',)
+
+class PaymentOrderCommentHistoryAdmin(admin.ModelAdmin):
+    form = PaymentOrderCommentHistoryForm
+    readonly_fields = ('time_created', 'status',)
+    
+    list_display = ('payment_order_id', 'created_by', 'comment', 'status', 'time_created',)
+    list_filter = ('status',)
+
+    fieldsets = (
+        ("General info", {
+            'fields': (
+                'payment_order_id', 'comment', 'status', 'time_created',
+            )
+        }),
+    )
+    
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': (
+                'payment_order_id', 'comment',
+            ),
+        }),
+    )
+    search_fields = ('payment_order_id', 'status', 'created_by',)
+    ordering = ('payment_order_id', 'comment', 'status', 'time_created', 'created_by',)
+
+    def get_form(self, request, *args, **kwargs):
+         form = super(PaymentOrderCommentHistoryAdmin, self).get_form(request, *args, **kwargs)
+         form.current_user = request.user
+         return form
 
 
 class ArticleGroupAdmin(admin.ModelAdmin):
@@ -190,3 +218,4 @@ admin.site.register(ArticleImage, ArticleImageAdmin)
 admin.site.register(PaymentItem, PaymentItemAdmin)
 admin.site.register(PaymentOrder, PaymentOrderAdmin)
 admin.site.register(ArticleGroup, ArticleGroupAdmin)
+admin.site.register(PaymentOrderCommentHistory, PaymentOrderCommentHistoryAdmin)

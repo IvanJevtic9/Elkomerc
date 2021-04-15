@@ -111,19 +111,62 @@ class ArticleGroup(models.Model):
     def __str__(self):
         return self.group_name    
 
-class PaymentItem(models.Model):
-    article_id = models.ForeignKey(
-        'Article', to_field='id', on_delete=models.CASCADE, related_name='item_article')
-    payment_order_id = models.ForeignKey(
-        'PaymentOrder', to_field='id', on_delete=models.CASCADE, related_name='items')
-    user_discount = models.PositiveIntegerField(
-        default=0, validators=[MinValueValidator(0), MaxValueValidator(100)],)
-    article_price = models.DecimalField(max_digits=20, decimal_places=2, validators=[
-        MinValueValidator(Decimal('0.01'))])
-    number_of_pieces = models.PositiveIntegerField(
-        default=1, validators=[MinValueValidator(1)])
-    reject_comment = models.TextField(null=True, blank=True)
+#Payment order status types
+STATUS_TYPE = (
+        ("OH", "NA_CEKANJU"),
+        ("IP", "U_OBRADI"),
+        ("RJ", "ODBIJENO"),
+        ("MF", "MODIFIKOVANO"),
+        ("AP", "ODOBRENO_ZA_SLANJE"),
+        ("SS", "POSLATO"),
+        ("PR", "VRACENA"),
+        ("PD", "ISPORUCENJA"),
+    )
 
+METHOD_OF_PAYMENT_TYPE = (
+    ("PS", "KUCNA_DOSTAVA"),
+)
+
+#Only None and true payment items are valid on soem payment order.
+VALID_TYPE = (
+    ("-1", "FALSE"),
+    ("0", "NONE"),
+    ("1", "TRUE"),
+)
+
+class PaymentOrder(models.Model):
+    email = models.ForeignKey('account.Account', to_field='email', on_delete=models.CASCADE, related_name='order_email')
+    full_name = models.CharField(max_length=61)
+    
+    method_of_payment = models.CharField(max_length=2, choices=METHOD_OF_PAYMENT_TYPE, default='PS')
+    status = models.CharField(max_length=2, choices=STATUS_TYPE, default='OH')
+
+    #payer information
+    address = models.CharField(max_length=100)
+    city = models.CharField(max_length=50)
+    zip_code = models.CharField(max_length=15)
+    phone = models.CharField(max_length=15,blank=True,null=True)
+
+    total_cost = models.DecimalField(max_digits=20, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))], default=Decimal('0.00'))
+
+    #time information
+    time_created = models.DateTimeField(auto_now_add=True)
+    time_modified = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.email.email + ' - ' + str(self.time_created)[0:19]
+
+class PaymentItem(models.Model):
+    article_id = models.ForeignKey('Article', to_field='id', on_delete=models.CASCADE, related_name='item_article')
+    payment_order_id = models.ForeignKey('PaymentOrder', to_field='id', on_delete=models.CASCADE, related_name='items')
+    
+    user_discount = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)],)
+    
+    number_of_pieces = models.PositiveIntegerField(default=1)
+    article_price = models.DecimalField(max_digits=20, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
+    article_attributes = models.TextField(blank=True,null=True)
+
+    valid = models.CharField(max_length=2, choices=VALID_TYPE, default="0")
     class Meta:
         verbose_name = "Payment item"
         verbose_name_plural = "Payment items"
@@ -131,46 +174,12 @@ class PaymentItem(models.Model):
     def amount(self):
         return str(self.number_of_pieces) + ' ' + self.article_id.unit_of_measure
 
-
-class PaymentOrder(models.Model):
-    STATUS_TYPE = (
-        ("DR", "U izradi"),
-        ("IN", "U obradi"),
-        ("RE", "Odbijeno"),
-        ("RW", "Odbijeno sa kontra ponudom"),
-        ("WF", "Čekanje na uplatu"),
-        ("SS", "Porudzbina poslata"),
-        ("PD", "Porudzbina isporučena"),
-    )
-
-    METHOD_OF_PAYMENT_TYPE = (
-        ("PS", "Payment slip"),
-    )
-
-    email = models.ForeignKey('account.Account', to_field='email',
-                              on_delete=models.CASCADE, related_name='order_email')
+class PaymentOrderCommentHistory(models.Model):
+    payment_order_id = models.ForeignKey('PaymentOrder', to_field='id', on_delete=models.CASCADE, related_name='payment_comment')
+    status = models.CharField(max_length=2, choices=STATUS_TYPE)
+    comment = models.TextField(max_length=300, null=True, blank=True)
+    created_by = models.ForeignKey('account.Account', to_field='email', on_delete=models.CASCADE, related_name='created_by')
     time_created = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=2, choices=STATUS_TYPE, default='DR')
-    method_of_payment = models.CharField(
-        max_length=2, choices=METHOD_OF_PAYMENT_TYPE, default='PS')
-
-    note = models.TextField(null=True, blank=True, max_length=300)
-    attribute_notes = models.TextField(null=True, blank=True)
-
-    #payer information
-    address = models.CharField(max_length=100,blank=True,null=True)
-    city = models.CharField(max_length=50,blank=True,null=True)
-    zip_code = models.CharField(max_length=15,blank=True,null=True)
-
-    def items(self):
-        display_string = " -- "
-        for p in PaymentItem.objects.filter(payment_order_id=self.id):
-            display_string = display_string + p.article_id.article_name + ' | ' + \
-                str(p.number_of_pieces) + ' ' + p.article_id.unit_of_measure + ' | ' + \
-                str(p.user_discount) + '% | ' + \
-                str(p.article_price) + ' din --\n'
-
-        return display_string
-
-    def __str__(self):
-        return self.email.email + ' - ' + str(self.time_created)[0:19]
+    class Meta:
+        verbose_name = "Payment order comment"
+        verbose_name_plural = "Payment order comments"

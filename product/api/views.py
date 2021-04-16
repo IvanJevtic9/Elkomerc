@@ -398,11 +398,11 @@ class PaymentOrderCreateApiView(generics.CreateAPIView):
         if serializer.is_valid(raise_exception=True):
             user = request.user            
 
-            address = serializer.validated_data.get('method_of_payment', None)
+            address = serializer.validated_data.get('address', None)
             city = serializer.validated_data.get('city', None)
             zip_code = serializer.validated_data.get('zip_code', None)
             phone = serializer.validated_data.get('phone', None)
-            method_of_payment = serializer.validated_data.get('method_of_payment', 'PS')
+            method_of_payment = serializer.validated_data.get('method_of_payment', 0)
             comment = serializer.validated_data.get('comment', None)
 
             account = Account.objects.get(email=user.email)
@@ -417,7 +417,7 @@ class PaymentOrderCreateApiView(generics.CreateAPIView):
                 email = account,
                 full_name = full_name,
                 method_of_payment = method_of_payment,
-                status = 'OH',
+                status = 0,
                 address = address,
                 city = city,
                 zip_code = zip_code,
@@ -428,7 +428,7 @@ class PaymentOrderCreateApiView(generics.CreateAPIView):
 
             PaymentOrderCommentHistory(
                 created_by = account,
-                status='OH',
+                status= 0,
                 payment_order_id=payment_order,
                 comment=comment
             ).save()

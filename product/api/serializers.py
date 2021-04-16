@@ -431,6 +431,7 @@ class PaymentOrderCreateSerializer(serializers.ModelSerializer):
 class PaymentOrderSerializer(serializers.ModelSerializer):
     payment_items = serializers.SerializerMethodField(read_only=True)
     history = serializers.SerializerMethodField(read_only=True)
+    method_of_payment = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = PaymentOrder
         fields = [
@@ -450,6 +451,9 @@ class PaymentOrderSerializer(serializers.ModelSerializer):
             'history'
         ]
     
+    def get_method_of_payment(self, obj):
+        return obj.get_method_of_payment_display()
+
     def get_payment_items(self, obj):
         payment_items = PaymentItem.objects.filter(payment_order_id=obj.id)
         items = []

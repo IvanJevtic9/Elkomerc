@@ -124,7 +124,8 @@ STATUS_TYPE = (
     )
 
 METHOD_OF_PAYMENT_TYPE = (
-    ("PS", "KUCNA_DOSTAVA"),
+    (0, "Plaćanje po uzeću."),
+    (1, "Plaćanje preko uplatnice.")
 )
 
 #Only None and true payment items are valid on soem payment order.
@@ -138,7 +139,7 @@ class PaymentOrder(models.Model):
     email = models.ForeignKey('account.Account', to_field='email', on_delete=models.CASCADE, related_name='order_email')
     full_name = models.CharField(max_length=61)
     
-    method_of_payment = models.CharField(max_length=2, choices=METHOD_OF_PAYMENT_TYPE, default='PS')
+    method_of_payment = models.IntegerField(choices=METHOD_OF_PAYMENT_TYPE, default=0)
     status = models.IntegerField(choices=STATUS_TYPE, default=0)
 
     #payer information

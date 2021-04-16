@@ -125,7 +125,7 @@ class PaymentOrderForm(forms.ModelForm):
         payment_order = super().save(commit=False)
         account = Account.objects.get(email=payment_order.email_id)
 
-        if account.account_type is 'USR':
+        if account.account_type == 'USR':
             full_name = User.objects.get(email=account.email).__str__()
         else:
             full_name = Company.objects.get(email=account.email).__str__()

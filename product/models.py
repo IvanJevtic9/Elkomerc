@@ -113,14 +113,14 @@ class ArticleGroup(models.Model):
 
 #Payment order status types
 STATUS_TYPE = (
-        ("OH", "NA_CEKANJU"),
-        ("IP", "U_OBRADI"),
-        ("RJ", "ODBIJENO"),
-        ("MF", "MODIFIKOVANO"),
-        ("AP", "ODOBRENO_ZA_SLANJE"),
-        ("SS", "POSLATO"),
-        ("PR", "VRACENA"),
-        ("PD", "ISPORUCENJA"),
+        (0, "NA_CEKANJU"),
+        (1, "U_OBRADI"),
+        (2, "ODBIJENO"),
+        (3, "MODIFIKOVANO"),
+        (4, "ODOBRENO_ZA_SLANJE"),
+        (5, "POSLATO"),
+        (6, "VRACENA"),
+        (7, "ISPORUCENJA"),
     )
 
 METHOD_OF_PAYMENT_TYPE = (
@@ -139,7 +139,7 @@ class PaymentOrder(models.Model):
     full_name = models.CharField(max_length=61)
     
     method_of_payment = models.CharField(max_length=2, choices=METHOD_OF_PAYMENT_TYPE, default='PS')
-    status = models.CharField(max_length=2, choices=STATUS_TYPE, default='OH')
+    status = models.IntegerField(choices=STATUS_TYPE, default=0)
 
     #payer information
     address = models.CharField(max_length=100)
@@ -176,7 +176,7 @@ class PaymentItem(models.Model):
 
 class PaymentOrderCommentHistory(models.Model):
     payment_order_id = models.ForeignKey('PaymentOrder', to_field='id', on_delete=models.CASCADE, related_name='payment_comment')
-    status = models.CharField(max_length=2, choices=STATUS_TYPE)
+    status = models.IntegerField(choices=STATUS_TYPE)
     comment = models.TextField(max_length=300, null=True, blank=True)
     created_by = models.ForeignKey('account.Account', to_field='email', on_delete=models.CASCADE, related_name='created_by')
     time_created = models.DateTimeField(auto_now_add=True)

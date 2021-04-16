@@ -475,7 +475,7 @@ class PaymentOrderSerializer(serializers.ModelSerializer):
 
         for comment in comment_history:
             history.append({
-                'created_by': comment.created_by.email,
+                'is_staff': comment.created_by.is_staff,
                 'comment': comment.comment,
                 'status': comment.status,
                 'time_created': comment.time_created
